@@ -19,14 +19,20 @@ class EmailService:
             )
 
             resend.api_key = current_app.config['RESEND_API_KEY']
+
             response = resend.Emails.send({
                 "from": "Research Digest <onboarding@resend.dev>",
                 "to": email,
-                "subject": "Your Daily Research Briefing",
+                "subject": "Your Weekly Research Briefing",
                 "html": final_html
             })
 
-            return bool(response.get('id'))
+            if 'id' in response:
+                current_app.logger.info(f"Email sent to {email} successfully")
+                return True
+            else:
+                current_app.logger.error(f"Email failed: {response.get('message', 'Unknown error')}")
+                return False
 
         except Exception as e:
             current_app.logger.error(f"Email error: {str(e)}")
