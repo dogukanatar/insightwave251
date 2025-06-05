@@ -1,4 +1,8 @@
+APScheduler==3.11.0
 Flask==3.1.1
 Flask-APScheduler==1.13.1
-resend==2.10.0
+Jinja2==3.1.6
+psycopg2-binary==2.9.10
 python-dotenv==1.1.0
+requests==2.32.3
+resend==2.10.0

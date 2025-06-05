@@ -5,30 +5,24 @@
         .container { max-width: 600px; margin: 20px auto; font-family: Arial, sans-serif; }
         .header { color: #2c3e50; border-bottom: 2px solid #ecf0f1; padding-bottom: 10px; }
         .content { margin: 20px 0; line-height: 1.6; }
-        .paper-title { color: #2980b9; font-size: 1.2em; }
-        .footer { color: #7f8c8d; text-align: center; font-size: 0.9em; }
+        .paper { margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .paper-title { color: #2980b9; font-size: 1.2em; margin-top: 0; }
+        .footer { color: #7f8c8d; text-align: center; font-size: 0.9em; margin-top: 30px; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📚 Daily Research Digest</h1>
+            <h1>📚 Weekly Research Digest</h1>
         </div>
 
         <div class="content">
-            <div class="paper-title">{{ title }}</div>
-            <div class="authors">Authors: {{ authors }}</div>
-            <div class="date">Published: {{ date }}</div>
-            <div class="summary">
-                <h3>AI Summary</h3>
-                <p>{{ summary }}</p>
-            </div>
-            <a href="{{ link }}">View Full Paper</a>
+            {{ content | safe }}
         </div>
 
         <div class="footer">
             <p>This is an automated message. Please do not reply.</p>
-            <p><a href="#">Unsubscribe</a></p>
+            <p><a href="#">Unsubscribe</a> | <a href="#">Manage Preferences</a></p>
         </div>
     </div>
 </body>
