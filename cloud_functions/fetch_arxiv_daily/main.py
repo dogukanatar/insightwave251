@@ -13,56 +13,67 @@ def fetch_arxiv_daily(request):
         crawl_date = today - timedelta(days=1)
 
         keywords_by_discipline = {
-               'Computer Science': [
-               'artificial intelligence', 'machine learning', 'deep learning', 'reinforcement learning',
-               'robotics', 'self-driving', 'programming language', 'large language model', 'LLM',
-               'natural language processing', 'NLP', 'computer vision', 'data mining', 'big data',
-               'supervised learning', 'unsupervised learning', 'semi-supervised learning', 'meta-learning',
-               'explainable AI', 'privacy', 'federated learning', 'digital twin',
-               'edge computing', 'IoT', 'blockchain', 'security', 'cryptography',
-               'quantum computing', 'database', 'operating system', 'knowledge graph',
-               'recommender system', 'anomaly detection', 'simulation', 'numerical analysis',
-               'optimization', 'graph neural network', 'GNN'
-           ],
-           'Economics': [
-               'economics', 'public policy', 'financial modeling', 'algorithmic trading',
-               'development studies', 'behavioral economics', 'game theory', 'market design', 'environmental economics',
-               'health economics', 'labor economics', 
-           ],
-           'Electrical Engineering and Systems Science': [
-               'signal processing', 'control systems', 'embedded systems', 'wireless communication',
-               'information theory', 'circuit design', 'semiconductor', 'analog electronics', 'digital electronics',
-               'power systems', 'smart grid', 'electromagnetic field', 'IoT', 'sensor networks',
-               'autonomous systems', 'cyber-physical systems', 'renewable energy', 'Audio and Speech Processing', 'Image and Video Processing', 'Signal Processing', 'energy harvesting', 'vehicular networks', 'AIoT', 'neuromorphic computing',
-               'mixed-signal systems', 'power electronics', '5G', '6G', 'low-power design'
-           ],
-           'Mathematics': [
-               'numerical analysis', 'optimization', 'cryptography', 'graph theory', 'algebra',
-               'topology', 'geometry', 'probability', 'statistics', 'Algebraic Geometry', 'Analysis of PDEs', 'Combinatorics', 'mathematics', 'Number Theory', 'combinatorics', 'differential equations', 'functional analysis',
-               'discrete mathematics', 'mathematical modeling'
-           ],
-           'Physics': [
-               'astrophysics', 'cosmology', 'medical', 'plasma', 'space', 'gravitational wave', 'dark matter', 'nuclear', 'ocean', 'Biological', 'microorganisms', 'virology', 'Chemical', 'solid', 'Newtonian', 
-               'exoplanet', 'galaxy', 'condensed matter', 'nanomaterials', 'materials science',
-               'quantum computing', 'meteorology', 'geophysics', 'climate change', 'energy', 'galaxy', 'solar', 'earth', 'Mesoscale', 'Nanoscale', 'Materials Science', 'Statistical Mechanics', 'electron', 'Superconductivity' 
-           ],
-           'Quantitative Biology': [
-               'bioinformatics', 'genomics', 'proteomics', 'metabolomics', 'gene therapy',
-               'epidemiology', 'systems biology', 'computational biology', 'single-cell analysis', 'CRISPR', 'population genetics', 'computational neuroscience',
-               'molecular dynamics'
-           ],
-           'Quantitative Finance': [
-               'financial modeling', 'algorithmic trading', 'risk management', 'quantitative analysis',
-               'time series', 'stochastic modeling', 'derivatives pricing', 'portfolio optimization', 'market microstructure',
-               'volatility modeling', 'option pricing'
-           ],
-           'Statistics': [
-               'data mining', 'big data', 'supervised learning', 'unsupervised learning',
-               'anomaly detection', 'time series', 'numerical analysis', 'probability',
-               'statistical inference', 'causal inference', 'Bayesian statistics', 'Monte Carlo simulation',
-               'hierarchical modeling', 'survival analysis', 'Methodology'
-           ]
-           }
+            'Computer Science': [
+                'artificial intelligence', 'machine learning', 'deep learning', 'reinforcement learning',
+                'robotics', 'self-driving', 'large language model', 'natural language processing',
+                'computer vision', 'data mining', 'big data', 'explainable AI', 'federated learning',
+                'edge computing', 'blockchain', 'security', 'quantum computing', 'knowledge graph',
+                'recommender system', 'graph neural network'
+            ],
+            'Economics': [
+                'economics', 'public policy', 'financial modeling', 'algorithmic trading',
+                'development studies', 'behavioral economics', 'game theory', 'market design',
+                'environmental economics', 'health economics', 'labor economics', 'risk management',
+                'macroeconomics', 'microeconomics', 'international trade'
+            ],
+            'Electrical Engineering and Systems Science': [
+                'signal processing', 'control systems', 'embedded systems', 'wireless communication',
+                'information theory', 'circuit design', 'semiconductor', 'power systems', 'smart grid',
+                'electromagnetic field', 'sensor networks', 'autonomous systems', 'cyber-physical systems',
+                'renewable energy', 'energy harvesting', 'vehicular networks', 'AIoT', '5G', 'low-power design'
+            ],
+            'Mathematics': [
+                'numerical analysis', 'optimization', 'cryptography', 'graph theory', 'algebra',
+                'topology', 'geometry', 'probability', 'statistics', 'combinatorics',
+                'differential equations', 'functional analysis', 'discrete mathematics',
+                'mathematical modeling', 'stochastic processes'
+            ],
+            'Physics': [
+                'astrophysics', 'cosmology', 'plasma physics', 'gravitational wave', 'dark matter',
+                'nuclear physics', 'condensed matter', 'nanomaterials', 'materials science',
+                'quantum computing', 'meteorology', 'geophysics', 'climate change', 'energy systems',
+                'superconductivity', 'electron dynamics', 'statistical mechanics', 'exoplanet studies'
+            ],
+            'Quantitative Biology': [
+                'bioinformatics', 'genomics', 'proteomics', 'metabolomics', 'gene therapy',
+                'epidemiology', 'systems biology', 'computational biology', 'single-cell analysis',
+                'CRISPR', 'population genetics', 'computational neuroscience', 'molecular dynamics',
+                'synthetic biology', 'cancer genomics'
+            ],
+            'Quantitative Finance': [
+                'financial modeling', 'algorithmic trading', 'risk management', 'quantitative analysis',
+                'time series analysis', 'stochastic modeling', 'derivatives pricing',
+                'portfolio optimization', 'market microstructure', 'volatility modeling',
+                'option pricing', 'asset pricing', 'high-frequency trading'
+            ],
+            'Statistics': [
+                'data mining', 'big data', 'supervised learning', 'unsupervised learning',
+                'anomaly detection', 'time series analysis', 'probability theory', 'statistical inference',
+                'causal inference', 'Bayesian statistics', 'Monte Carlo simulation',
+                'hierarchical modeling', 'survival analysis', 'regression analysis'
+            ]
+        }
+        session = requests.Session()
+        retry = Retry(
+            total=5,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+            allowed_methods=frozenset(['GET', 'POST'])
+        )
+        adapter = HTTPAdapter(max_retries=retry)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+
 
         def fetch_arxiv_papers(keyword, start=0, max_results=100):
             base_url = 'http://export.arxiv.org/api/query?'
@@ -71,16 +82,6 @@ def fetch_arxiv_daily(request):
             headers = {
              'User-Agent': 'MyArxivCrawler/1.0 (https://github.com/INSTWAVE-A-BCD/INSTWAVE; contact: aplusbcd1@gmail.com)'
             }
-            session = requests.Session()
-            retry = Retry(
-                total=5,
-                backoff_factor=1,
-                status_forcelist=[429, 500, 502, 503, 504],
-                allowed_methods=frozenset(['GET', 'POST'])
-            )
-            adapter = HTTPAdapter(max_retries=retry)
-            session.mount('http://', adapter)
-            session.mount('https://', adapter)
 
             try:
                 response = requests.get(url, headers=headers, timeout=2300)
