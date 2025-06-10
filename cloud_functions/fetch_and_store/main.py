@@ -56,6 +56,7 @@ def fetch_and_store(request):
             """
             INSERT INTO thesis (title, author, summary, arxiv_id, publish_date, categories)
             VALUES (%s, %s, %s, %s, %s, %s)
+            ON CONFLICT (arxiv_id) DO NOTHING
             """,
             (title, authors, summary, arxiv_id, publish_date, categories)
         )
