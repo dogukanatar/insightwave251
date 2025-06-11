@@ -3,13 +3,21 @@ import resend
 from flask import current_app
 from pathlib import Path
 from jinja2 import Template
+from .translation import translate_content
+import logging
+
+logger = logging.getLogger('INSTWAVE')
 
 
 class EmailService:
     @staticmethod
-    def send_research_digest(email: str, content: str):
+    def send_research_digest(user, content):
         """Send digest email using Resend API"""
         try:
+            # Translate content if needed
+            if user['language'] == 'ko':
+                content = translate_content(content, 'en', 'ko')
+
             template_path = Path("templates/email_base.html")
             base_template = Template(template_path.read_text())
 
@@ -22,18 +30,31 @@ class EmailService:
 
             response = resend.Emails.send({
                 "from": "Research Digest <onboarding@resend.dev>",
-                "to": email,
+                "to": user['email'],
                 "subject": "Your Weekly Research Briefing",
                 "html": final_html
             })
 
             if 'id' in response:
-                current_app.logger.info(f"Email sent to {email} successfully")
+                logger.info(f"Email sent to {user['email']} successfully")
                 return True
             else:
-                current_app.logger.error(f"Email failed: {response.get('message', 'Unknown error')}")
+                logger.error(f"Email failed: {response.get('message', 'Unknown error')}")
                 return False
 
         except Exception as e:
-            current_app.logger.error(f"Email error: {str(e)}")
+            logger.error(f"Email error: {str(e)}")
+            return False
+
+
+class KakaoService:
+    @staticmethod
+    def send_research_digest(user, content):
+        """Placeholder for Kakao notification service"""
+        try:
+            # TODO: Implement Kakao API integration
+            logger.info(f"[KAKAO] Would send to {user['email']}: {content[:50]}...")
+            return True
+        except Exception as e:
+            logger.error(f"Kakao error: {str(e)}")
             return False

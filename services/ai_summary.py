@@ -1,13 +1,14 @@
+# services/ai_summary.py
 import psycopg2
 from openai import OpenAI
 import json
 from datetime import datetime
-# from google.cloud import storage
 import os
 from dotenv import load_dotenv
 from .database import get_db_connection
 from flask import current_app
 import logging
+import re
 
 logger = logging.getLogger('INSTWAVE')
 
@@ -17,8 +18,11 @@ load_dotenv()
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-def ask_openai(summary, model="gpt-3.5-turbo"):
-    prompt = f"""
+
+def ask_openai(summary, lang="en"):
+    """Generate summary in specified language"""
+    if lang == "ko":
+        prompt = f"""
 다음 논문 원문을 분석해줘:
 
 {summary}
@@ -40,31 +44,47 @@ def ask_openai(summary, model="gpt-3.5-turbo"):
   "category": "..."
 }}
 """
+    else:  # Default to English
+        prompt = f"""
+Please analyze the following research paper:
+
+{summary}
+
+- Paper summary (one line):
+- Key topics:
+- Important keywords (3-5):
+- Classification category (e.g., Computer Vision, NLP):
+- AI evaluation (may include subjective interpretation):
+- Importance score (0-1 floating point):
+
+Organize the results in the following JSON format:
+
+{{
+  "summary": "...",
+  "evaluation": "...",
+  "importance": 0.xx,
+  "keywords": ["...", "...", "..."],
+  "category": "..."
+}}
+"""
+
     try:
         response = client.chat.completions.create(
-            model=model,
+            model="gpt-3.5-turbo",
             messages=[
-                {"role": "system", "content": "너는 논문 요약 전문가야. 결과는 오직 명확한 JSON 형태로만 반환해."},
+                {
+                    "role": "system",
+                    "content": "You are an expert research paper summarizer. Return only valid JSON."
+                },
                 {"role": "user", "content": prompt}
             ],
             temperature=0.3
         )
         return response.choices[0].message.content.strip()
     except Exception as e:
-        logger.error(f"[OpenAI API 오류] {e}")
+        logger.error(f"[OpenAI API error] {e}")
         return None
 
-# def upload_to_gcs(bucket_name, source_file, destination_blob):
-#     try:
-#         storage_client = storage.Client()
-#         bucket = storage_client.bucket(bucket_name)
-#         blob = bucket.blob(destination_blob)
-#         blob.upload_from_filename(source_file)
-#         logger.info(f"✅ GCS 업로드 완료: gs://{bucket_name}/{destination_blob}")
-#         return True
-#     except Exception as e:
-#         logger.error(f"GCS 업로드 오류: {e}")
-#         return False
 
 def generate_ai_summaries():
     conn = get_db_connection()
@@ -77,20 +97,28 @@ def generate_ai_summaries():
     """)
     rows = cur.fetchall()
 
-    for thesis_id, arxiv_id, summary in rows:
+    # Track progress
+    total = len(rows)
+    success_count = 0
+    error_count = 0
+
+    for idx, (thesis_id, arxiv_id, summary) in enumerate(rows):
         if not summary or not arxiv_id:
             continue
 
-        logger.info(f"[Summarizing] ID: {thesis_id}, arXiv: {arxiv_id}")
-        llm_json_text = ask_openai(summary)
+        logger.info(f"[Summarizing] ID: {thesis_id}, arXiv: {arxiv_id} ({idx + 1}/{total})")
+
+        # Try to generate summary in English (more reliable)
+        llm_json_text = ask_openai(summary, "en")
         if not llm_json_text:
+            error_count += 1
             continue
 
         logger.debug(f"OpenAI response for ID {thesis_id}: {llm_json_text}")
 
         try:
-            # 修复JSON转义问题
-            llm_json_text = llm_json_text.replace('\\$', '$')
+            # Fix JSON escape issues
+            llm_json_text = re.sub(r'\\(?!["\\/bfnrt]|u[0-9a-fA-F]{4})', r'\\\\', llm_json_text)
             llm_data = json.loads(llm_json_text)
             llm_json_string = json.dumps(llm_data, ensure_ascii=False)
 
@@ -103,31 +131,19 @@ def generate_ai_summaries():
             """, (llm_json_string, datetime.now(), thesis_id))
             conn.commit()
 
-            # filename = f"{arxiv_id}_analysis.json"
-            # local_path = os.path.join("llm_summarized", filename)
-            #
-            # with open(local_path, "w", encoding="utf-8") as f:
-            #     json.dump({
-            #         "id": thesis_id,
-            #         "arxiv_id": arxiv_id,
-            #         "ai_summary": llm_data
-            #     }, f, ensure_ascii=False, indent=2)
-            #
-            # gcs_path = f"llm_summerized/{filename}"
-            #
-            # if not upload_to_gcs(current_app.config['BUCKET_NAME'], local_path, gcs_path):
-            #     logger.error(f"Failed to upload {local_path} to GCS.")
-            #     continue
-
+            success_count += 1
             logger.info(f"[Completed] ID: {thesis_id} - AI summary saved to database")
 
         except json.JSONDecodeError as jde:
             logger.error(f"JSON Parsing Error for ID {thesis_id}: {jde}. Response: {llm_json_text}")
-            continue
+            error_count += 1
         except Exception as e:
             logger.error(f"Unexpected error for ID {thesis_id}: {str(e)}")
-            continue
+            error_count += 1
 
     cur.close()
     conn.close()
-    logger.info("AI summary generation completed. All results saved to database.")
+
+    # Summary report
+    logger.info(f"AI summary generation completed. "
+                f"Success: {success_count}, Errors: {error_count}, Total: {total}")

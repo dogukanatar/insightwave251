@@ -7,6 +7,7 @@ load_dotenv()
 class Config:
     SCHEDULER_TIMEZONE = 'Asia/Seoul'
     RESEND_API_KEY = os.getenv('RESEND_API_KEY')
+    SECRET_KEY = os.getenv('SECRET_KEY', 'default_secret_key')
 
     # Database configuration added
     DB_HOST = os.getenv('DB_HOST')
