@@ -48,25 +48,22 @@ export async function subscribeAction(
 
   try {
     // Use the Flask backend API endpoint
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:5000"
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:5001"
     
-         // Create form data to match Flask backend expectations
-     const formData = new URLSearchParams()
-     formData.append('name', name)
-     formData.append('email', email)
-     
-     // Add topics as multiple form fields
-     topics.forEach(topic => {
-       formData.append('topics', topic)
-     })
-     
-     const response = await fetch(`${backendUrl}/submit`, {
-       method: "POST",
-       headers: {
-         "Content-Type": "application/x-www-form-urlencoded",
-       },
-       body: formData.toString()
-     })
+    const response = await fetch(`${backendUrl}/submit`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        name,
+        email,
+        ...topics.reduce((acc, topic, index) => {
+          acc[`topics`] = topic
+          return acc
+        }, {} as Record<string, string>)
+      }).toString()
+    })
 
     if (!response.ok) {
       let errorMessage = "Submission failed."

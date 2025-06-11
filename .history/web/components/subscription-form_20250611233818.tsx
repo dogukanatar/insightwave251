@@ -10,14 +10,12 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { subscribeAction } from "@/actions/subscribe"
 
-// Updated topics to match API requirements (6 predefined topics with IDs 1-6)
 const topics = [
-  { id: "1", label: "AI/ML", value: "1" },
-  { id: "2", label: "Physics", value: "2" },
-  { id: "3", label: "Computer Science", value: "3" },
-  { id: "4", label: "Mathematics", value: "4" },
-  { id: "5", label: "Biology", value: "5" },
-  { id: "6", label: "Engineering", value: "6" },
+  { id: "ai", label: "AI", value: "AI" },
+  { id: "ml", label: "ML", value: "ML" },
+  { id: "robotics", label: "Robotics", value: "Robotics" },
+  { id: "nlp", label: "NLP", value: "NLP" },
+  { id: "data-science", label: "Data Science", value: "Data Science" },
 ]
 
 const channels = [
@@ -28,55 +26,16 @@ const channels = [
 export default function SubscriptionForm() {
   const [state, formAction, isPending] = useActionState(subscribeAction, null)
   const [showConfirmation, setShowConfirmation] = useState(false)
-  const [selectedTopics, setSelectedTopics] = useState<string[]>([])
-  const [validationError, setValidationError] = useState<string>("")
 
   useEffect(() => {
     if (state?.status === "success") {
       setShowConfirmation(true)
-      // Reset form on success
-      setSelectedTopics([])
-      setValidationError("")
     }
   }, [state])
 
-  const handleTopicChange = (topicId: string, checked: boolean) => {
-    if (checked) {
-      setSelectedTopics(prev => [...prev, topicId])
-    } else {
-      setSelectedTopics(prev => prev.filter(id => id !== topicId))
-    }
-    // Clear validation error when user starts selecting topics
-    if (validationError) {
-      setValidationError("")
-    }
-  }
-
-  // Clear validation error when form submission starts
-  useEffect(() => {
-    if (isPending) {
-      setValidationError("")
-    }
-  }, [isPending])
-
-  const handleSubmitClick = () => {
-    // Client-side validation for minimum 3 topics
-    if (selectedTopics.length < 3) {
-      setValidationError("Please select at least 3 research topics.")
-      return false
-    }
-    setValidationError("")
-    return true
-  }
-
   const handleCloseConfirmation = () => {
     setShowConfirmation(false)
-  }
-
-  const getErrorMessage = () => {
-    if (validationError) return validationError
-    if (state?.status === "error") return state.message
-    return ""
+    // Optionally reset the form here if needed
   }
 
   return (
@@ -117,19 +76,14 @@ export default function SubscriptionForm() {
               />
             </div>
             <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-bold text-gray-800">Select Topics</h3>
-                <p className="text-sm text-gray-600 mt-1">Choose at least 3 research areas</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+              <h3 className="text-lg font-bold text-gray-800">Select Topics</h3>
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                 {topics.map((topic) => (
                   <div key={topic.id} className="flex items-center space-x-2">
                     <Checkbox
                       id={topic.id}
                       name="topics"
                       value={topic.value}
-                      checked={selectedTopics.includes(topic.id)}
-                      onCheckedChange={(checked) => handleTopicChange(topic.id, checked as boolean)}
                       className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white hover:border-blue-400"
                     />
                     <Label
@@ -141,26 +95,35 @@ export default function SubscriptionForm() {
                   </div>
                 ))}
               </div>
-              {selectedTopics.length > 0 && (
-                <p className="text-xs text-gray-500">
-                  {selectedTopics.length} topic{selectedTopics.length !== 1 ? 's' : ''} selected 
-                  {selectedTopics.length < 3 && ` (${3 - selectedTopics.length} more needed)`}
-                </p>
-              )}
             </div>
 
-            {/* Display validation or API errors */}
-            {getErrorMessage() && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3">
-                <p className="text-sm text-red-600">{getErrorMessage()}</p>
+            {/* New: Preferred Notification Channels section */}
+            <div className="space-y-4">
+              <h3 className="text-lg font-bold text-gray-800">Preferred Notification Channels</h3>
+              <div className="flex flex-wrap gap-4">
+                {channels.map((channel) => (
+                  <div key={channel.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={channel.id}
+                      name="channels"
+                      value={channel.value}
+                      className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white hover:border-blue-400"
+                    />
+                    <Label
+                      htmlFor={channel.id}
+                      className="cursor-pointer text-sm font-medium text-gray-700 hover:text-blue-600"
+                    >
+                      {channel.label}
+                    </Label>
+                  </div>
+                ))}
               </div>
-            )}
+            </div>
 
             <Button
               type="submit"
               className="w-full rounded-lg bg-blue-600 py-2 text-lg font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               disabled={isPending}
-              onClick={handleSubmitClick}
             >
               {isPending ? "Subscribing..." : "Subscribe"}
             </Button>
@@ -171,18 +134,12 @@ export default function SubscriptionForm() {
         </CardFooter>
       </Card>
 
-      {/* Success Dialog */}
       <Dialog open={showConfirmation} onOpenChange={setShowConfirmation}>
         <DialogContent className="sm:max-w-[425px] rounded-xl p-6 text-center">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-green-600">Thank you for subscribing!</DialogTitle>
             <DialogDescription className="mt-2 text-gray-700">
               {state?.message || "You have successfully subscribed to our research updates."}
-              {state?.user_id && (
-                <span className="block mt-2 text-xs text-gray-500">
-                  Subscription ID: {state.user_id}
-                </span>
-              )}
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">

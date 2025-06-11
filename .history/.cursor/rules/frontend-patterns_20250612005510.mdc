@@ -1,0 +1,535 @@
+# INSTWAVE Research Digest System - Frontend Patterns
+
+## Next.js 15 Architecture
+
+### App Router Structure
+The project uses Next.js 15 App Router with TypeScript as shown in the directory structure:
+
+```
+web/app/
+├── layout.tsx          # Root layout with global styles
+├── page.tsx           # Home page (subscription form)
+├── globals.css        # Global Tailwind CSS styles
+├── admin/
+│   └── page.tsx       # Admin dashboard page
+└── digest/
+    └── ...            # Digest-related pages
+```
+
+### Root Layout Pattern
+Follow the layout structure from [layout.tsx](mdc:web/app/layout.tsx):
+
+```typescript
+import type { Metadata } from "next"
+import "./globals.css"
+
+export const metadata: Metadata = {
+  title: "INSTWAVE Research Digest",
+  description: "Stay updated with the latest research papers",
+}
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <html lang="en">
+      <body className="min-h-screen bg-gray-50">
+        {children}
+      </body>
+    </html>
+  )
+}
+```
+
+## Component Architecture
+
+### Client Component Pattern
+Use the established pattern from [subscription-form.tsx](mdc:web/components/subscription-form.tsx):
+
+```typescript
+"use client"
+
+import { useState, useEffect } from "react"
+import { useActionState } from "react"
+import { Button } from "@/components/ui/button"
+import { serverAction } from "@/actions/action-name"
+
+export default function ComponentName() {
+  // State management with useActionState for server actions
+  const [state, formAction, isPending] = useActionState(serverAction, null)
+  const [localState, setLocalState] = useState(false)
+
+  // Effects for side effects
+  useEffect(() => {
+    if (state?.status === "success") {
+      // Handle success state
+    }
+  }, [state])
+
+  return (
+    <div className="container">
+      <form action={formAction}>
+        {/* Form content */}
+      </form>
+    </div>
+  )
+}
+```
+
+### Admin Dashboard Pattern
+Complex dashboard components should follow [admin-dashboard.tsx](mdc:web/components/admin-dashboard.tsx) structure:
+
+```typescript
+"use client"
+
+import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "@/components/ui/button"
+
+export default function AdminDashboard() {
+  const [activeTab, setActiveTab] = useState("overview")
+  const [data, setData] = useState(null)
+
+  return (
+    <div className="container mx-auto p-6">
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard</h1>
+      
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="papers">Papers</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="overview">
+          {/* Overview content */}
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}
+```
+
+## UI Component System
+
+### Shadcn/UI Integration
+The project uses Radix UI components via shadcn/ui as configured in [components.json](mdc:web/components.json):
+
+```json
+{
+  "style": "default",
+  "rsc": true,
+  "tsx": true,
+  "tailwind": {
+    "config": "tailwind.config.js",
+    "css": "app/globals.css",
+    "baseColor": "slate",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "aliases": {
+    "components": "@/components",
+    "utils": "@/lib/utils"
+  }
+}
+```
+
+### Component Usage Patterns
+Follow established patterns for common UI components:
+
+```typescript
+// Form components
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
+
+// Layout components
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+
+// Navigation components
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+// Form example
+<Card className="w-full max-w-md">
+  <CardHeader>
+    <CardTitle>Form Title</CardTitle>
+    <CardDescription>Form description</CardDescription>
+  </CardHeader>
+  <CardContent>
+    <form action={formAction} className="space-y-6">
+      <div className="space-y-2">
+        <Label htmlFor="field">Field Label</Label>
+        <Input
+          id="field"
+          name="field"
+          type="text"
+          required
+          className="rounded-lg"
+        />
+      </div>
+    </form>
+  </CardContent>
+</Card>
+```
+
+## Server Actions Integration
+
+### Server Action Pattern
+Create server actions following the pattern in the `actions/` directory:
+
+```typescript
+"use server"
+
+interface ActionState {
+  status?: "success" | "error";
+  message?: string;
+  data?: any;
+}
+
+export async function serverAction(
+  prevState: ActionState | null,
+  formData: FormData
+): Promise<ActionState> {
+  try {
+    // Extract form data
+    const name = formData.get("name") as string
+    const email = formData.get("email") as string
+    
+    // Validation
+    if (!name || !email) {
+      return {
+        status: "error",
+        message: "Name and email are required"
+      }
+    }
+
+    // External API call or database operation
+    const response = await fetch("http://localhost:5000/api/endpoint", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, email })
+    })
+
+    if (!response.ok) {
+      throw new Error("API request failed")
+    }
+
+    const result = await response.json()
+
+    return {
+      status: "success",
+      message: "Operation completed successfully",
+      data: result
+    }
+
+  } catch (error) {
+    console.error("Server action error:", error)
+    return {
+      status: "error",
+      message: "An unexpected error occurred"
+    }
+  }
+}
+```
+
+### Form Integration with Server Actions
+Connect forms to server actions using useActionState:
+
+```typescript
+export default function FormComponent() {
+  const [state, formAction, isPending] = useActionState(serverAction, null)
+  const [showDialog, setShowDialog] = useState(false)
+
+  useEffect(() => {
+    if (state?.status === "success") {
+      setShowDialog(true)
+    }
+  }, [state])
+
+  return (
+    <form action={formAction}>
+      {/* Form fields */}
+      <Button type="submit" disabled={isPending}>
+        {isPending ? "Processing..." : "Submit"}
+      </Button>
+      
+      {/* Error display */}
+      {state?.status === "error" && (
+        <div className="text-red-600 mt-2">
+          {state.message}
+        </div>
+      )}
+
+      {/* Success dialog */}
+      <Dialog open={showDialog} onOpenChange={setShowDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Success</DialogTitle>
+            <DialogDescription>
+              {state?.message}
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
+    </form>
+  )
+}
+```
+
+## Data Display Components
+
+### Paper Card Component Pattern
+Follow the structure from [thesis-summary-card.tsx](mdc:web/components/thesis-summary-card.tsx):
+
+```typescript
+interface ThesisData {
+  id: number
+  title: string
+  author: string
+  ai_summary: {
+    summary: string
+    category: string
+    keywords: string[]
+    importance: number
+  }
+  created_at: string
+}
+
+interface ThesisSummaryCardProps {
+  thesis: ThesisData
+}
+
+export default function ThesisSummaryCard({ thesis }: ThesisSummaryCardProps) {
+  return (
+    <Card className="mb-4">
+      <CardHeader>
+        <CardTitle className="text-lg">{thesis.title}</CardTitle>
+        <p className="text-sm text-gray-600">by {thesis.author}</p>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-2">
+          <p><strong>Summary:</strong> {thesis.ai_summary.summary}</p>
+          <p><strong>Category:</strong> {thesis.ai_summary.category}</p>
+          <div>
+            <strong>Keywords:</strong>{" "}
+            {thesis.ai_summary.keywords.map((keyword, index) => (
+              <span
+                key={index}
+                className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mr-1"
+              >
+                {keyword}
+              </span>
+            ))}
+          </div>
+          <p><strong>Importance:</strong> {thesis.ai_summary.importance}/1.0</p>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+```
+
+### List Component Pattern
+Create reusable list components like [paper-list.tsx](mdc:web/components/paper-list.tsx):
+
+```typescript
+interface Paper {
+  id: number
+  title: string
+  author: string
+  date: string
+}
+
+interface PaperListProps {
+  papers: Paper[]
+  onPaperSelect?: (paper: Paper) => void
+}
+
+export default function PaperList({ papers, onPaperSelect }: PaperListProps) {
+  if (papers.length === 0) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No papers found
+      </div>
+    )
+  }
+
+  return (
+    <div className="space-y-4">
+      {papers.map((paper) => (
+        <Card 
+          key={paper.id}
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onPaperSelect?.(paper)}
+        >
+          <CardContent className="p-4">
+            <h3 className="font-medium">{paper.title}</h3>
+            <p className="text-sm text-gray-600">{paper.author}</p>
+            <p className="text-xs text-gray-500">{paper.date}</p>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  )
+}
+```
+
+## Styling Patterns
+
+### Tailwind CSS Usage
+Follow the established Tailwind patterns from [globals.css](mdc:web/app/globals.css):
+
+```css
+/* Global styles */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom component classes */
+.paper-card {
+  @apply bg-white rounded-lg shadow-md p-6 mb-4 hover:shadow-lg transition-shadow;
+}
+
+.form-field {
+  @apply space-y-2;
+}
+
+.form-input {
+  @apply rounded-lg border-gray-300 focus:border-blue-500 focus:ring-blue-500;
+}
+```
+
+### Responsive Design Patterns
+Use responsive utilities consistently:
+
+```typescript
+<div className="container mx-auto px-4 sm:px-6 lg:px-8">
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {/* Grid items */}
+  </div>
+</div>
+
+<Card className="w-full max-w-md sm:max-w-lg lg:max-w-xl">
+  {/* Responsive card width */}
+</Card>
+```
+
+## State Management Patterns
+
+### Local State Management
+Use useState for component-specific state:
+
+```typescript
+const [isLoading, setIsLoading] = useState(false)
+const [selectedItems, setSelectedItems] = useState<string[]>([])
+const [formData, setFormData] = useState({
+  name: "",
+  email: "",
+  topics: []
+})
+```
+
+### Server State with useActionState
+For forms that interact with server actions:
+
+```typescript
+const [state, formAction, isPending] = useActionState(serverAction, null)
+
+// Check state changes
+useEffect(() => {
+  if (state?.status === "success") {
+    // Handle success
+  } else if (state?.status === "error") {
+    // Handle error
+  }
+}, [state])
+```
+
+## TypeScript Integration
+
+### Props Interface Definition
+Always define interfaces for component props:
+
+```typescript
+interface ComponentProps {
+  title: string
+  items: Item[]
+  onItemClick?: (item: Item) => void
+  className?: string
+}
+
+export default function Component({ 
+  title, 
+  items, 
+  onItemClick, 
+  className 
+}: ComponentProps) {
+  // Component implementation
+}
+```
+
+### Event Handler Typing
+Properly type event handlers:
+
+```typescript
+const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  event.preventDefault()
+  // Handle form submission
+}
+
+const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  setFormData(prev => ({
+    ...prev,
+    [event.target.name]: event.target.value
+  }))
+}
+```
+
+## Error Handling and Loading States
+
+### Error Boundary Pattern
+Create error boundaries for component error handling:
+
+```typescript
+"use client"
+
+import { useEffect } from "react"
+
+export default function Error({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string }
+  reset: () => void
+}) {
+  useEffect(() => {
+    console.error(error)
+  }, [error])
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[400px]">
+      <h2 className="text-xl font-semibold mb-4">Something went wrong!</h2>
+      <Button onClick={reset}>Try again</Button>
+    </div>
+  )
+}
+```
+
+### Loading State Handling
+Show loading states during async operations:
+
+```typescript
+{isPending ? (
+  <div className="flex items-center justify-center py-4">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+  </div>
+) : (
+  <div>{/* Content when loaded */}</div>
+)}
+```

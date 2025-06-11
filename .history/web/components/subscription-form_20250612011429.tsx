@@ -59,16 +59,6 @@ export default function SubscriptionForm() {
     }
   }, [isPending])
 
-  const handleSubmitClick = () => {
-    // Client-side validation for minimum 3 topics
-    if (selectedTopics.length < 3) {
-      setValidationError("Please select at least 3 research topics.")
-      return false
-    }
-    setValidationError("")
-    return true
-  }
-
   const handleCloseConfirmation = () => {
     setShowConfirmation(false)
   }
@@ -89,7 +79,7 @@ export default function SubscriptionForm() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={formAction} className="space-y-6">
+          <form onSubmit={handleFormSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name" className="font-semibold text-gray-700">
                 Name
@@ -160,7 +150,6 @@ export default function SubscriptionForm() {
               type="submit"
               className="w-full rounded-lg bg-blue-600 py-2 text-lg font-semibold text-white shadow-md transition-all duration-200 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
               disabled={isPending}
-              onClick={handleSubmitClick}
             >
               {isPending ? "Subscribing..." : "Subscribe"}
             </Button>
