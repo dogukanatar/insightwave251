@@ -104,38 +104,42 @@ def insert_subscription(name, email, topics):
 
 
 def get_recent_papers():
-    """Get papers with topics from last week"""
+    """Get papers with topics from last week """
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
         today = datetime.now()
-        last_monday = today - timedelta(days=today.weekday() + 7)
+
+        last_tuesday = today - timedelta(days=today.weekday() + 6)
         this_monday = today - timedelta(days=today.weekday())
 
         cur.execute("""
             SELECT t.id, t.title, t.author, t.ai_summary, t.created_at,
-                   array_agg(top.id) AS topic_ids
-            FROM Thesis t
-            JOIN Paper_topics pt ON t.id = pt.paper_id
-            JOIN Topics top ON pt.topic_id = top.id
+                   array_agg(top.id) AS topic_ids,
+                   t.arxiv_id
+            FROM thesis t
+            JOIN paper_topics pt ON t.id = pt.paper_id
+            JOIN topics top ON pt.topic_id = top.id
             WHERE t.created_at BETWEEN %s AND %s
             AND t.ai_summary IS NOT NULL
-            GROUP BY t.id
-        """, (last_monday, this_monday))
+            GROUP BY t.id, t.arxiv_id
+        """, (last_tuesday, this_monday))
 
         papers = []
         for row in cur.fetchall():
-            papers.append({
-                'id': row[0],
-                'title': row[1],
-                'author': row[2],
-                'summary': row[3],
-                'date': row[4].strftime('%Y-%m-%d'),
-                'topics': row[5],
-                'link': f"https://arxiv.org/abs/{row[0]}"
-            })
-
+            try:
+                ai_summary = json.loads(row[3]) if row[3] else {}
+                papers.append({
+                    'id': row[0],
+                    'title': row[1],
+                    'author': row[2],
+                    'ai_summary': ai_summary,
+                    'date': row[4].strftime('%Y-%m-%d'),
+                    'topics': row[5],
+                    'link': f"https://arxiv.org/abs/{row[6]}" if row[6] else "#"
+                })
+            except json.JSONDecodeError:
+                logger.error(f"Invalid JSON in ai_summary for paper {row[0]}")
         return papers
     except Exception as e:
         logger.error(f"Database error in get_recent_papers: {str(e)}")
