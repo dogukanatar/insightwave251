@@ -1,0 +1,282 @@
+# INSTWAVE Research Digest System - Project Setup Guide
+
+## Project Structure and Directory Context
+
+The INSTWAVE Research Digest System is organized as a monorepo with separate frontend and backend directories:
+
+```
+/Users/dogukan/Documents/insightwave251/
+├── server/           # Flask backend
+│   ├── app.py       # Main Flask application
+│   ├── services/    # Business logic modules
+│   └── venv/        # Python virtual environment
+├── web/             # Next.js frontend  
+│   ├── package.json # npm scripts and dependencies
+│   ├── app/         # Next.js app router
+│   └── components/  # React components
+└── .cursor/
+    └── rules/       # Cursor IDE rules (this directory)
+```
+
+## Critical Setup Instructions
+
+### Frontend Development
+**IMPORTANT**: The npm scripts are located in the `web/` directory, not the root directory.
+
+To run the frontend development server:
+
+```bash
+# Navigate to the web directory first
+cd web/
+
+# Then run the development server
+npm run dev
+
+# This will start Next.js on http://localhost:3000 with Turbopack
+```
+
+**Common Error Resolution**:
+If you see `npm ERR! Missing script: "dev"`, you are likely in the wrong directory. The error occurs when running `npm run dev` from the root directory instead of the `web/` directory.
+
+Available npm scripts in `web/package.json`:
+- `npm run dev` - Start development server with Turbopack
+- `npm run build` - Build for production
+- `npm run start` - Start production server
+- `npm run lint` - Run ESLint
+
+### Backend Development
+The Flask backend is located in the `server/` directory:
+
+```bash
+# Navigate to the server directory
+cd server/
+
+# Activate virtual environment (if exists)
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies (if needed)
+pip install -r requirements.txt
+
+# Run Flask server
+python3 app.py
+
+# Server will start on http://localhost:5000
+```
+
+## Development Workflow
+
+### Starting Both Services
+For full-stack development, run both services simultaneously:
+
+**Terminal 1 (Backend)**:
+```bash
+cd server/
+source venv/bin/activate
+python3 app.py
+```
+
+**Terminal 2 (Frontend)**:
+```bash
+cd web/
+npm run dev
+```
+
+### Environment Configuration
+Ensure proper environment variables are set:
+
+**Backend (.env in server/ directory)**:
+```env
+DB_HOST=localhost
+DB_NAME=instwave_db
+DB_USER=postgres
+DB_PASSWORD=your_password
+RESEND_API_KEY=your_resend_key
+OPENAI_API_KEY=your_openai_key
+```
+
+**Frontend (environment variables in web/ if needed)**:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000
+```
+
+## Package Dependencies
+
+### Backend Dependencies ([requirements.txt](mdc:server/requirements.txt))
+```
+APScheduler==3.11.0          # Job scheduling
+Flask==3.1.1                # Web framework
+psycopg2-binary==2.9.10     # PostgreSQL adapter
+openai==1.85.0               # OpenAI API client
+resend==2.10.0               # Email service
+python-dotenv==1.1.0        # Environment variables
+```
+
+### Frontend Dependencies ([package.json](mdc:web/package.json))
+```json
+{
+  "dependencies": {
+    "next": "15.2.4",           // Next.js framework
+    "react": "^19.0.0",        // React library
+    "@radix-ui/*": "^1.x.x",   // UI component library
+    "tailwind-merge": "^3.3.1" // Tailwind utilities
+  }
+}
+```
+
+## Database Setup Requirements
+
+### PostgreSQL Configuration
+Ensure PostgreSQL is running and accessible:
+
+```sql
+-- Create database and user
+CREATE DATABASE instwave_db;
+CREATE USER instwave_user WITH PASSWORD 'your_password';
+GRANT ALL PRIVILEGES ON DATABASE instwave_db TO instwave_user;
+
+-- Set timezone (important for scheduler)
+ALTER DATABASE instwave_db SET timezone TO 'Asia/Seoul';
+```
+
+### Required Tables
+The system requires these tables to be created:
+- `Users` - User subscription data
+- `Topics` - Research categories (6 predefined)
+- `User_topics` - Many-to-many user topic preferences
+- `Thesis` - Research papers with AI summaries
+- `Paper_topics` - Many-to-many paper topic classification
+
+## Service Dependencies
+
+### External Services Required
+1. **PostgreSQL Database**
+   - Version 12+ recommended
+   - Timezone configured to Asia/Seoul
+   - User with read/write permissions
+
+2. **OpenAI API Access**
+   - GPT-3.5-turbo model access
+   - API key configured in environment
+
+3. **Resend Email Service**
+   - Account with API key
+   - Domain verification (for production)
+
+4. **Google Cloud Storage** (Optional)
+   - Service account credentials
+   - Bucket for file storage
+
+## Troubleshooting Common Issues
+
+### "Missing script: dev" Error
+**Problem**: Running `npm run dev` from root directory
+**Solution**: Navigate to `web/` directory first, then run `npm run dev`
+
+### Database Connection Failed
+**Problem**: PostgreSQL connection issues
+**Solutions**:
+- Verify PostgreSQL is running
+- Check DB_HOST, DB_NAME, DB_USER, DB_PASSWORD in .env
+- Ensure user has proper permissions
+- Verify timezone setting (Asia/Seoul)
+
+### Import/Module Errors
+**Frontend Issues**:
+- Ensure you're in `web/` directory
+- Run `npm install` to install dependencies
+- Check TypeScript configuration
+
+**Backend Issues**:
+- Activate virtual environment
+- Run `pip install -r requirements.txt`
+- Check Python path and imports
+
+### Scheduler Not Running
+**Problem**: APScheduler jobs not executing
+**Solutions**:
+- Verify timezone configuration (Asia/Seoul)
+- Check cron expressions for job timing
+- Ensure Flask app context is properly set
+- Monitor logs for scheduler startup messages
+
+### API Integration Failures
+**OpenAI Issues**:
+- Verify OPENAI_API_KEY is set correctly
+- Check API rate limits and quotas
+- Monitor response format for JSON parsing
+
+**Resend Email Issues**:
+- Verify RESEND_API_KEY is set
+- Check domain verification status
+- Ensure proper email format
+
+## Production Deployment Checklist
+
+### Environment Preparation
+- [ ] Production database setup with proper credentials
+- [ ] Environment variables configured for production
+- [ ] API keys for production services
+- [ ] SSL certificates for HTTPS
+- [ ] Domain configuration for email service
+
+### Application Configuration
+- [ ] Flask app configured for production (DEBUG=False)
+- [ ] Next.js built for production (`npm run build`)
+- [ ] Static file serving configured
+- [ ] Database migrations applied
+- [ ] Scheduler timezone verified
+
+### Monitoring Setup
+- [ ] Application logging configured
+- [ ] Health check endpoints implemented
+- [ ] Database connection monitoring
+- [ ] Email delivery monitoring
+- [ ] AI API usage monitoring
+
+## IDE Configuration
+
+### Cursor Rules Location
+Cursor IDE rules are stored in `.cursor/rules/` directory:
+- `project-architecture.mdc` - System overview and workflows
+- `coding-standards.mdc` - Code style and naming conventions
+- `database-patterns.mdc` - PostgreSQL operations and patterns
+- `ai-integration.mdc` - OpenAI GPT-3.5 integration patterns
+- `email-scheduling.mdc` - Resend API and APScheduler patterns
+- `development-workflow.mdc` - Setup and deployment guidelines
+- `frontend-patterns.mdc` - Next.js and React component patterns
+- `project-setup.mdc` - This file with setup instructions
+
+### File References in Rules
+Rules use the format `[filename.ext](mdc:path/to/file)` to reference project files, enabling Cursor to understand file relationships and provide better context-aware assistance.
+
+## Quick Start Commands
+
+### First Time Setup
+```bash
+# Clone and navigate to project
+cd /Users/dogukan/Documents/insightwave251
+
+# Backend setup
+cd server/
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # Edit with your credentials
+python3 app.py
+
+# Frontend setup (new terminal)
+cd ../web/
+npm install
+npm run dev
+```
+
+### Daily Development
+```bash
+# Start backend
+cd server/ && source venv/bin/activate && python3 app.py
+
+# Start frontend (new terminal)  
+cd web/ && npm run dev
+```
+
+This setup guide ensures consistent development environment and resolves common directory-related issues.

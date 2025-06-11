@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { mockNotifications } from "@/lib/mock-data"
 
 interface Notification {
@@ -32,9 +33,10 @@ export async function getRecentNotifications(): Promise<{ success: boolean; data
     // return { success: true, data: data.notifications };
 
     // For mock purposes, return the mock data, sorted by sentAt descending
-    const sortedNotifications = [...(mockNotifications as Notification[])].sort(
+    const sortedNotifications = [...mockNotifications].sort(
       (a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime(),
     )
+    revalidatePath("/admin") // Revalidate the admin page to show updated logs (if dynamic)
     return { success: true, data: sortedNotifications }
   } catch (error) {
     console.error("Error fetching notifications:", error)

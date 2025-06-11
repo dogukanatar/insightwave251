@@ -6,6 +6,7 @@
 import * as React from "react"
 
 const TOAST_LIMIT = 1
+const TOAST_REMOVE_DELAY = 1000000
 
 type ToasterToast = {
   id: string
@@ -15,8 +16,7 @@ type ToasterToast = {
   duration?: number
   className?: string
   variant?: "default" | "destructive"
-  open?: boolean
-  onOpenChange?: (open: boolean) => void
+  [key: string]: any
 }
 
 const actionTypes = {
@@ -121,7 +121,7 @@ function useToast() {
         ...toast,
         id,
         open: true,
-        onOpenChange: (open: boolean) => {
+        onOpenChange: (open) => {
           if (!open) {
             dispatch({
               type: actionTypes.DISMISS_TOAST,

@@ -1,5 +1,6 @@
 "use server"
 
+import { revalidatePath } from "next/cache"
 import { mockThesisSummaries } from "@/lib/mock-data"
 
 /**
@@ -23,6 +24,7 @@ export async function getThesisSummaries() {
     // return { success: true, data: data.summaries };
 
     // For mock purposes, return the mock data
+    revalidatePath("/admin") // Revalidate the admin page to show updated summaries (if dynamic)
     return { success: true, data: mockThesisSummaries }
   } catch (error) {
     console.error("Error fetching thesis summaries:", error)
