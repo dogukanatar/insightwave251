@@ -73,28 +73,34 @@
     </form>
 
     <div class="subscription-info">
-        <h2 class="section-title">Subscription Details</h2>
+    <h2 class="section-title">Subscription Details</h2>
 
-        <div class="info-item">
-            <div class="info-label">Next Digest</div>
-            <div class="info-value">Tuesday, {{ next_tuesday }}</div>
-        </div>
+    <div class="info-item">
+        <div class="info-label">Next Digest</div>
+        <div class="info-value">Tuesday, {{ next_tuesday }}</div>
+    </div>
 
-        <div class="info-item">
-            <div class="info-label">Status</div>
-            <div class="info-value">
-                {% if active %}
-                    <span style="color: green;">Active</span>
-                {% else %}
-                    <span style="color: red;">Inactive</span>
-                {% endif %}
-            </div>
+    <div class="info-item">
+        <div class="info-label">Status</div>
+        <div class="info-value">
+            {% if active %}
+                <span style="color: green;">Active</span>
+            {% else %}
+                <span style="color: red;">Inactive</span>
+            {% endif %}
         </div>
     </div>
+
+    <div class="info-item">
+        <form method="POST" action="/send_weekly_digest_now">
+            <button type="submit" class="send-now-btn">Send Weekly Digest Now</button>
+            <p class="info-note">Receive this week's research updates immediately</p>
+        </form>
+    </div>
+</div>
 </div>
 
 <style>
-    /* 添加这些样式确保正确显示 */
     body {
         font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         background-color: #f5f8fa;
@@ -242,6 +248,31 @@
     .info-value {
         font-size: 18px;
         color: #2c3e50;
+    }
+
+    .send-now-btn {
+        background: #3498db;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: background-color 0.3s;
+        width: 100%;
+        margin-top: 10px;
+    }
+
+    .send-now-btn:hover {
+        background: #2980b9;
+    }
+
+    .info-note {
+        font-size: 14px;
+        color: #7f8c8d;
+        margin-top: 8px;
+        text-align: center;
     }
 </style>
 {% endblock %}

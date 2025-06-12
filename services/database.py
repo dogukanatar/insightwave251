@@ -85,20 +85,19 @@ def upsert_subscription(name, email, password_hash, topics, language='en', notif
 
         if existing_user:
             user_id = existing_user[0]
-            # 更新用户信息
+            # update user
             cur.execute(
                 "UPDATE users SET name = %s, password_hash = %s, language = %s, notification_method = %s, active = %s WHERE id = %s",
                 (name, password_hash, language, notification_method, active, user_id)
             )
         else:
-            # 创建新用户
+            # create user
             cur.execute(
                 "INSERT INTO users (name, email, password_hash, language, notification_method, active) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
                 (name, email, password_hash, language, notification_method, active)
             )
             user_id = cur.fetchone()[0]
 
-        # 删除旧主题并插入新主题
         cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
         for topic_id in topic_ids:
             cur.execute(
@@ -172,13 +171,10 @@ def get_recent_papers():
         cur = conn.cursor()
         today = datetime.now()
 
-        # 计算时间范围：上周二到本周一
-        # 周一到周日：0=Monday, 1=Tuesday, ..., 6=Sunday
-        days_since_tuesday = (today.weekday() - 1) % 7  # 距离上次周二的天数
+        days_since_tuesday = (today.weekday() - 1) % 7
         last_tuesday = today - timedelta(days=days_since_tuesday + 7)
         this_monday = today - timedelta(days=today.weekday())
 
-        # 获取符合条件的论文
         cur.execute("""
             SELECT id, title, author, ai_summary, created_at,
                    arxiv_id, categories
@@ -186,24 +182,27 @@ def get_recent_papers():
             WHERE created_at BETWEEN %s AND %s
             AND ai_summary IS NOT NULL
         """, (last_tuesday, this_monday))
-
         papers = []
         for row in cur.fetchall():
             try:
-                # 解析分类字符串（格式如："{cs.CV, cs.AI}"）
-                categories_str = row[6].strip('{}')
-                categories = [cat.strip() for cat in categories_str.split(',')] if categories_str else []
+                categories = []
+                if row[6]:
+                    if isinstance(row[6], str):
+                        categories_str = row[6].strip('{}')
+                        categories = [cat.strip() for cat in categories_str.split(',')] if categories_str else []
+                    elif isinstance(row[6], list):
+                        categories = row[6]
+                    else:
+                        logger.warning(f"Unexpected categories type for paper {row[0]}: {type(row[6])}")
 
-                # 提取顶级分类（如将"cs.CV"转为"cs"）
                 top_level_categories = set()
                 for category in categories:
-                    if '.' in category:
+                    if isinstance(category, str) and '.' in category:
                         top_level = category.split('.')[0]
                         top_level_categories.add(top_level)
-                    else:
+                    elif isinstance(category, str):
                         top_level_categories.add(category)
 
-                # 查询映射表获取主题ID
                 if top_level_categories:
                     cur.execute("""
                         SELECT DISTINCT topic_id 
@@ -214,9 +213,7 @@ def get_recent_papers():
                 else:
                     topic_ids = []
 
-                # 解析AI摘要
                 ai_summary = json.loads(row[3]) if row[3] else {}
-
                 papers.append({
                     'id': row[0],
                     'title': row[1],
@@ -230,7 +227,6 @@ def get_recent_papers():
                 logger.error(f"Invalid JSON in ai_summary for paper {row[0]}: {e}")
             except Exception as e:
                 logger.error(f"Error processing paper {row[0]}: {e}")
-
         return papers
     except Exception as e:
         logger.error(f"Database error in get_recent_papers: {str(e)}")

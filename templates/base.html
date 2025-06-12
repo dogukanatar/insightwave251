@@ -50,7 +50,6 @@
     </style>
 </head>
 <body>
-    <!-- Flash 消息容器 -->
     <div class="flash-messages">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
@@ -61,11 +60,9 @@
         {% endwith %}
     </div>
 
-    <!-- 页面内容 -->
     {% block content %}{% endblock %}
 
     <script>
-        // 5秒后自动隐藏消息
         setTimeout(() => {
             const messages = document.querySelectorAll('.flash-message');
             messages.forEach(msg => {

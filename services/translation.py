@@ -1,5 +1,5 @@
 # services/translation.py
-import re  # 添加re模块导入
+import re
 from openai import OpenAI
 import os
 from flask import current_app
@@ -13,9 +13,7 @@ def translate_content(content, source_lang, target_lang):
     try:
         client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-        # 添加对HTML内容的特殊处理
         if "<div" in content or "<p>" in content:
-            # 提取文本内容进行翻译
             text_content = re.sub(r'<[^>]+>', '', content)
             translated = client.chat.completions.create(
                 model="gpt-3.5-turbo",
@@ -34,7 +32,6 @@ def translate_content(content, source_lang, target_lang):
             translated_text = translated.choices[0].message.content.strip()
             return content.replace(text_content, translated_text)
         else:
-            # 普通文本翻译
             response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
@@ -52,4 +49,4 @@ def translate_content(content, source_lang, target_lang):
             return response.choices[0].message.content.strip()
     except Exception as e:
         logger.error(f"Translation error: {e}")
-        return content  # 失败时返回原始内容
+        return content

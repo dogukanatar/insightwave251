@@ -14,9 +14,14 @@ class EmailService:
     def send_research_digest(user, content):
         """Send digest email using Resend API"""
         try:
-            # Translate content if needed
             if user['language'] == 'ko':
                 content = translate_content(content, 'en', 'ko')
+
+                subject = "INSTWAVE 연구 요약 리포트"
+                content = content.replace('<h2>', '')
+            else:
+                subject = "INSTWAVE Research Digest"
+                content = content.replace('<h2>Hello', '').replace('<h2>', '')
 
             template_path = Path("templates/email_base.html")
             base_template = Template(template_path.read_text())
@@ -29,9 +34,9 @@ class EmailService:
             resend.api_key = current_app.config['RESEND_API_KEY']
 
             response = resend.Emails.send({
-                "from": "Research Digest <onboarding@resend.dev>",
+                "from": "INSTWAVE Digest <onboarding@resend.dev>",
                 "to": user['email'],
-                "subject": "Your Weekly Research Briefing",
+                "subject": subject,
                 "html": final_html
             })
 
@@ -45,6 +50,7 @@ class EmailService:
         except Exception as e:
             logger.error(f"Email error: {str(e)}")
             return False
+
 
 
 class KakaoService:

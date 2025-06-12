@@ -5,6 +5,7 @@ from apscheduler.triggers.cron import CronTrigger
 from services.email import EmailService, KakaoService
 from services.database import get_subscribed_users, get_recent_papers
 from services.ai_summary import generate_ai_summaries
+from services.content_generator import generate_email_content  # 从新模块导入
 
 logger = logging.getLogger('INSTWAVE')
 
@@ -57,7 +58,8 @@ class SchedulerManager:
                     if not user.get('active', True):
                         logger.info(f"Skipping inactive user: {user['email']}")
                         continue
-                    email_content = self._generate_email_content(papers, user)
+
+                    email_content = generate_email_content(papers, user)
 
                     # Send notifications based on user preference
                     if user['notification_method'] in ['email', 'both']:
@@ -68,7 +70,6 @@ class SchedulerManager:
                             logger.error(f"Failed to send email to {user['email']}")
 
                     if user['notification_method'] in ['kakao', 'both']:
-                        # Placeholder for Kakao notification
                         success = KakaoService.send_research_digest(user, email_content)
                         if success:
                             logger.info(f"Kakao notification sent to {user['email']}")
@@ -88,42 +89,6 @@ class SchedulerManager:
                 logger.info("AI summary generation completed.")
             except Exception as e:
                 logger.error(f"AI summary generation failed: {str(e)}")
-
-    def _generate_email_content(self, papers, user):
-        """Generate personalized email content"""
-        user_topic_ids = set(user['topics'])
-        user_papers = [
-            p for p in papers
-            if set(p['topics']) & user_topic_ids
-        ]
-
-        if not user_papers:
-            return f"""
-            <div class="no-papers">
-                <h3>Hello {user['name']},</h3>
-                <p>There are no new papers in your topics this week.</p>
-                <p>Check back next Tuesday for new research updates!</p>
-            </div>
-            """
-
-        paper_items = "\n".join([
-            f"""<div class="paper">
-                <h3 class="paper-title">{p['title']}</h3>
-                <p><strong>Authors:</strong> {p['author']}</p>
-                <p><strong>Published:</strong> {p['date']}</p>
-                <p><strong>Summary:</strong> {p['ai_summary']['summary'][:200]}...</p>
-                <p><a href="{p['link']}">View Full Paper</a></p>
-            </div>"""
-            for p in user_papers
-        ])
-
-        return f"""
-        <h2>Hello {user['name']},</h2>
-        <p>Here are new papers in your topics this week:</p>
-        <div class="papers-container">
-            {paper_items}
-        </div>
-        """
 
     def start(self):
         """Start the scheduler"""

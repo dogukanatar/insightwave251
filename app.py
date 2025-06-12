@@ -2,8 +2,10 @@
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session, flash
 from config import Config
 from scheduler import SchedulerManager
-from services.database import upsert_subscription, get_db_connection
+from services.database import upsert_subscription, get_db_connection, get_recent_papers
 from services.auth import authenticate_user
+from services.content_generator import generate_email_content
+from services.email import EmailService, KakaoService
 from werkzeug.security import generate_password_hash
 import logging
 import re
@@ -34,37 +36,31 @@ def home():
 
 @app.route('/register', methods=['GET', 'POST'])
 def register():
-    """用户注册页面"""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
 
-        # 邮箱格式验证
         if not re.match(EMAIL_REGEX, email):
             flash('Invalid email format', 'error')
             return render_template('register.html')
 
-        # 密码复杂度验证
         if not re.match(r'^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d]{8,20}$', password):
             flash('Password must be 8-20 characters with letters and numbers', 'error')
             return render_template('register.html')
 
         try:
-            # 生成密码哈希
             password_hash = generate_password_hash(password)
 
-            # 创建新用户（默认设置）
             user_id = upsert_subscription(
-                name=email.split('@')[0],  # 使用邮箱前缀作为默认名称
+                name=email.split('@')[0],
                 email=email,
                 password_hash=password_hash,
-                topics=[1, 3, 4],  # 默认主题：AI/ML, CS, Math
+                topics=[1, 3, 4],  # AI/ML, CS, Math
                 language='en',
                 notification_method='email',
-                active=True  # 默认激活
+                active=True
             )
 
-            # 自动登录
             session['user_id'] = user_id
             session['user_email'] = email
             session['user_language'] = 'en'
@@ -80,7 +76,6 @@ def register():
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-    """用户登录页面"""
     if request.method == 'POST':
         email = request.form.get('email')
         password = request.form.get('password')
@@ -100,7 +95,6 @@ def login():
 
 @app.route('/dashboard', methods=['GET', 'POST'])
 def dashboard():
-    """用户仪表盘 - 管理偏好设置"""
     if 'user_id' not in session:
         flash('Please login first', 'error')
         return redirect(url_for('login'))
@@ -108,18 +102,15 @@ def dashboard():
     user_id = session['user_id']
 
     if request.method == 'POST':
-        # 处理偏好更新
         topics = request.form.getlist('topics')
         language = request.form.get('language', 'en')
         notification_method = request.form.get('notification_method', 'email')
-        active = 'active' in request.form  # 是否激活通知
+        active = 'active' in request.form
 
         try:
-            # 获取用户信息
             conn = get_db_connection()
             cur = conn.cursor()
 
-            # 更新用户偏好
             cur.execute("""
                 UPDATE users 
                 SET language = %s, 
@@ -128,7 +119,6 @@ def dashboard():
                 WHERE id = %s
             """, (language, notification_method, active, user_id))
 
-            # 更新用户主题
             cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
             for topic_id in topics:
                 cur.execute(
@@ -139,7 +129,6 @@ def dashboard():
             conn.commit()
             flash('Preferences updated successfully!', 'success')
 
-            # 更新会话中的语言设置
             session['user_language'] = language
         except Exception as e:
             logger.error(f"Failed to update preferences: {str(e)}")
@@ -148,13 +137,11 @@ def dashboard():
             cur.close()
             conn.close()
 
-    # 计算下一个周二
     today = datetime.now()
     days_until_tuesday = (1 - today.weekday() + 7) % 7
     next_tuesday = today + timedelta(days=days_until_tuesday)
     next_tuesday_str = next_tuesday.strftime('%Y-%m-%d')
 
-    # 获取用户当前设置
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -167,13 +154,11 @@ def dashboard():
         """, (user_id,))
         user = cur.fetchone()
 
-        # 获取用户选择的主题
         cur.execute("""
             SELECT topic_id FROM user_topics WHERE user_id = %s
         """, (user_id,))
         user_topics = [row[0] for row in cur.fetchall()]
 
-        # 获取所有可用主题
         cur.execute("SELECT id, label FROM topics")
         all_topics = [{'id': row[0], 'label': row[1]} for row in cur.fetchall()]
 
@@ -192,6 +177,73 @@ def dashboard():
     finally:
         cur.close()
         conn.close()
+
+
+@app.route('/send_weekly_digest_now', methods=['POST'])
+def send_weekly_digest_now():
+    if 'user_id' not in session:
+        flash('Please login first', 'error')
+        return redirect(url_for('login'))
+
+    conn = None
+    cur = None
+    try:
+        user_id = session['user_id']
+        conn = get_db_connection()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT u.id, u.email, u.name, u.language, u.notification_method,
+                   array_agg(ut.topic_id) AS topics
+            FROM users u
+            JOIN user_topics ut ON u.id = ut.user_id
+            WHERE u.id = %s
+            GROUP BY u.id
+        """, (user_id,))
+
+        user_row = cur.fetchone()
+        if not user_row:
+            flash('User not found', 'error')
+            return redirect(url_for('dashboard'))
+
+        user = {
+            'id': user_row[0],
+            'email': user_row[1],
+            'name': user_row[2],
+            'language': user_row[3],
+            'notification_method': user_row[4],
+            'topics': user_row[5]
+        }
+
+        papers = get_recent_papers()
+
+        email_content = generate_email_content(papers, user)
+
+        if user['notification_method'] in ['email', 'both']:
+            success = EmailService.send_research_digest(user, email_content)
+            if success:
+                flash('Weekly digest sent to your email!', 'success')
+            else:
+                flash('Failed to send email. Please try again later.', 'error')
+
+        if user['notification_method'] in ['kakao', 'both']:
+            success = KakaoService.send_research_digest(user, email_content)
+            if success:
+                flash('Weekly digest sent via Kakao!', 'success')
+            else:
+                flash('Failed to send Kakao notification.', 'error')
+
+        return redirect(url_for('dashboard'))
+
+
+    except Exception as e:
+        logger.error(f"Error sending weekly digest: {str(e)}")
+        flash('An error occurred. Please try again.', 'error')
+        return redirect(url_for('dashboard'))
+    finally:
+        if cur: cur.close()
+        if conn: conn.close()
+
 
 @app.route('/logout')
 def logout():
