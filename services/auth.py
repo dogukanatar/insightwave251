@@ -1,23 +1,18 @@
-# services/auth.py
 import logging
 from werkzeug.security import check_password_hash
 from .database import get_db_connection, get_user_by_email
 
 logger = logging.getLogger('INSTWAVE')
 
-
 def authenticate_user(email, password):
-    """Authenticate user with email and password"""
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
         cur.execute("""
             SELECT id, name, email, password_hash, language, notification_method 
             FROM users 
             WHERE email = %s
         """, (email,))
-
         user = cur.fetchone()
         if user and check_password_hash(user[3], password):
             return {

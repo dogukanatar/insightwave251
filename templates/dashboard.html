@@ -1,59 +1,84 @@
-<!-- templates/dashboard.html -->
 {% extends "base.html" %}
-
 {% block content %}
 <header>
-    <div class="logo">Research Digest</div>
+    <div class="brand">
+        <h1 class="logo">{{ _('brand_name') }}</h1>
+        <p class="tagline">{{ _('tagline') }}</p>
+    </div>
     <div class="user-info">
         <span class="user-email">{{ email }}</span>
-        <a href="/logout" class="logout-btn">Logout</a>
+        <a href="/logout" class="logout-btn">{{ _('logout') }}</a>
+    </div>
+    <div class="language-selector">
+        <select onchange="changeLanguage(this.value)">
+            <option value="en" {% if language =='en' %}selected{% endif %}>{{ _('english') }}</option>
+            <option value="ko" {% if language =='ko' %}selected{% endif %}>{{ _('korean') }}</option>
+        </select>
     </div>
 </header>
 
 <div class="container">
     <div class="dashboard-header">
-        <h1>Your Preferences</h1>
+        <h1>{{ _('dashboard_title') }}</h1>
     </div>
 
     <form method="POST" action="/dashboard">
         <div class="notification-settings">
-            <h2 class="section-title">Notification Settings</h2>
-
+            <h2 class="section-title">{{ _('notification_settings') }}</h2>
             <div class="settings-grid">
                 <div>
                     <div class="setting-group">
-                        <label for="language">Preferred Language</label>
+                        <label for="language">{{ _('preferred_language') }}</label>
                         <select id="language" name="language">
-                            <option value="en" {% if language =='en' %}selected{% endif %}>English</option>
-                            <option value="ko" {% if language =='ko' %}selected{% endif %}>Korean</option>
+                            <option value="en" {% if language =='en' %}selected{% endif %}>{{ _('english') }}</option>
+                            <option value="ko" {% if language =='ko' %}selected{% endif %}>{{ _('korean') }}</option>
                         </select>
                     </div>
 
                     <div class="setting-group">
-                        <label>Notification Method</label>
+                        <label>{{ _('notification_method') }}</label>
                         <div>
                             <input type="radio" id="email" name="notification_method" value="email"
                                    {% if notification_method =='email' %}checked{% endif %}>
-                            <label for="email">Email Only</label>
+                            <label for="email">{{ _('email_only') }}</label>
+                        </div>
+                        <div>
+                            <input type="radio" id="kakao" name="notification_method" value="kakao"
+                                   {% if notification_method =='kakao' %}checked{% endif %}>
+                            <label for="kakao">{{ _('kakao_only') }}</label>
                         </div>
                         <div>
                             <input type="radio" id="both" name="notification_method" value="both"
                                    {% if notification_method =='both' %}checked{% endif %}>
-                            <label for="both">Email & Kakao</label>
+                            <label for="both">{{ _('both') }}</label>
                         </div>
+                    </div>
+
+                    <div class="setting-group">
+                        <label>{{ _('kakao_account') }}</label>
+                        <div class="kakao-status">
+                            {% if kakao_connected %}
+                                <span class="connected">{{ _('connected') }}</span>
+                            {% else %}
+                                <span class="not-connected">{{ _('not_connected') }}</span>
+                                <a href="/auth/kakao" class="connect-btn">{{ _('connect_kakao') }}</a>
+                            {% endif %}
+                        </div>
+                        <p class="kakao-note">{{ _('kakao_note') }}</p>
                     </div>
 
                     <div class="setting-group">
                         <label>
                             <input type="checkbox" name="active" {% if active %}checked{% endif %}>
-                            Receive weekly notifications
+                            {{ _('receive_notifications') }}
                         </label>
                     </div>
                 </div>
 
                 <div>
                     <div class="setting-group">
-                        <label>Research Topics</label>
+                        <label>{{ _('research_topics') }}</label>
+                        <p class="setting-note">{{ _('topic_selection_note') }}</p>
                         <div class="topics-container">
                             {% for topic in all_topics %}
                             <div class="topic-item">
@@ -68,211 +93,74 @@
                 </div>
             </div>
 
-            <button type="submit" class="save-btn">Save Preferences</button>
+            <button type="submit" class="save-btn">{{ _('save_preferences') }}</button>
         </div>
     </form>
 
     <div class="subscription-info">
-    <h2 class="section-title">Subscription Details</h2>
+        <h2 class="section-title">{{ _('subscription_details') }}</h2>
 
-    <div class="info-item">
-        <div class="info-label">Next Digest</div>
-        <div class="info-value">Tuesday, {{ next_tuesday }}</div>
-    </div>
+        <div class="info-item">
+            <div class="info-label">{{ _('next_digest') }}</div>
+            <div class="info-value">Tuesday, {{ next_tuesday }}</div>
+        </div>
 
-    <div class="info-item">
-        <div class="info-label">Status</div>
-        <div class="info-value">
-            {% if active %}
-                <span style="color: green;">Active</span>
-            {% else %}
-                <span style="color: red;">Inactive</span>
-            {% endif %}
+        <div class="info-item">
+            <div class="info-label">{{ _('status') }}</div>
+            <div class="info-value">
+                {% if active %}
+                    <span style="color: green;">{{ _('active') }}</span>
+                {% else %}
+                    <span style="color: red;">{{ _('inactive') }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="info-item">
+            <form method="POST" action="/send_weekly_digest_now">
+                <button type="submit" class="send-now-btn">{{ _('send_now') }}</button>
+                <p class="info-note">{{ _('send_note') }}</p>
+            </form>
         </div>
     </div>
-
-    <div class="info-item">
-        <form method="POST" action="/send_weekly_digest_now">
-            <button type="submit" class="send-now-btn">Send Weekly Digest Now</button>
-            <p class="info-note">Receive this week's research updates immediately</p>
-        </form>
-    </div>
-</div>
 </div>
 
 <style>
-    body {
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        background-color: #f5f8fa;
-        margin: 0;
-        padding: 0;
-    }
-
-    header {
-        background-color: #2c3e50;
-        color: white;
-        padding: 15px 30px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-
-    .logo {
-        font-size: 24px;
-        font-weight: bold;
-    }
-
-    .user-info {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-    }
-
-    .user-email {
-        font-size: 16px;
-    }
-
-    .logout-btn {
-        background: #e74c3c;
-        color: white;
-        border: none;
-        padding: 8px 15px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 14px;
-    }
-
-    .container {
-        max-width: 1200px;
-        margin: 30px auto;
-        padding: 0 20px;
-    }
-
-    .dashboard-header {
-        margin-bottom: 30px;
-    }
-
-    .dashboard-header h1 {
-        color: #2c3e50;
-        margin: 0;
-        font-size: 28px;
-    }
-
-    .notification-settings {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        padding: 25px;
-        margin-bottom: 30px;
-    }
-
-    .section-title {
-        color: #3498db;
-        margin-top: 0;
-        border-bottom: 1px solid #eee;
-        padding-bottom: 10px;
-        font-size: 22px;
-    }
-
-    .settings-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-top: 20px;
-    }
-
-    .setting-group {
-        margin-bottom: 25px;
-    }
-
-    .setting-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-        color: #34495e;
-    }
-
-    select, input[type="checkbox"], input[type="radio"] {
-        margin-right: 8px;
-    }
-
-    .topics-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-        gap: 12px;
-    }
-
-    .topic-item {
-        background: #f8f9fa;
-        padding: 12px;
-        border-radius: 4px;
-        border: 1px solid #ddd;
-    }
-
-    .save-btn {
-        background: #2ecc71;
-        color: white;
-        border: none;
-        padding: 12px 25px;
-        border-radius: 4px;
-        font-size: 16px;
-        cursor: pointer;
-        font-weight: 600;
-        margin-top: 20px;
-        transition: background-color 0.3s;
-    }
-
-    .save-btn:hover {
-        background: #27ae60;
-    }
-
-    .subscription-info {
-        background: white;
-        border-radius: 8px;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-        padding: 25px;
-    }
-
-    .info-item {
-        margin-bottom: 15px;
-        padding-bottom: 15px;
-        border-bottom: 1px solid #eee;
-    }
-
-    .info-label {
-        font-weight: 500;
-        color: #7f8c8d;
-        margin-bottom: 5px;
-    }
-
-    .info-value {
-        font-size: 18px;
-        color: #2c3e50;
-    }
-
-    .send-now-btn {
-        background: #3498db;
-        color: white;
-        border: none;
-        padding: 12px 20px;
-        border-radius: 4px;
-        font-size: 16px;
-        cursor: pointer;
-        font-weight: 600;
-        transition: background-color 0.3s;
-        width: 100%;
-        margin-top: 10px;
-    }
-
-    .send-now-btn:hover {
-        background: #2980b9;
-    }
-
-    .info-note {
-        font-size: 14px;
-        color: #7f8c8d;
-        margin-top: 8px;
-        text-align: center;
-    }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f8fa; margin: 0; padding: 0; }
+    header { background-color: #2c3e50; color: white; padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; }
+    .brand { text-align: center; }
+    .logo { font-size: 32px; font-weight: bold; letter-spacing: 1px; }
+    .tagline { font-size: 16px; margin-top: 5px; }
+    .user-info { display: flex; align-items: center; gap: 15px; }
+    .user-email { font-size: 16px; }
+    .logout-btn { background: #e74c3c; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-size: 14px; }
+    .language-selector { position: absolute; top: 20px; right: 20px; }
+    .container { max-width: 1200px; margin: 30px auto; padding: 0 20px; }
+    .dashboard-header { margin-bottom: 30px; }
+    .dashboard-header h1 { color: #2c3e50; margin: 0; font-size: 28px; }
+    .notification-settings { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); padding: 25px; margin-bottom: 30px; }
+    .section-title { color: #3498db; margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; font-size: 22px; }
+    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-top: 20px; }
+    .setting-group { margin-bottom: 25px; }
+    .setting-group label { display: block; margin-bottom: 8px; font-weight: 500; color: #34495e; }
+    select, input[type="checkbox"], input[type="radio"] { margin-right: 8px; }
+    .topics-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+    .topic-item { background: #f8f9fa; padding: 12px; border-radius: 4px; border: 1px solid #ddd; }
+    .save-btn { background: #2ecc71; color: white; border: none; padding: 12px 25px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: 600; margin-top: 20px; transition: background-color 0.3s; }
+    .save-btn:hover { background: #27ae60; }
+    .subscription-info { background: white; border-radius: 8px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); padding: 25px; }
+    .info-item { margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+    .info-label { font-weight: 500; color: #7f8c8d; margin-bottom: 5px; }
+    .info-value { font-size: 18px; color: #2c3e50; }
+    .send-now-btn { background: #3498db; color: white; border: none; padding: 12px 20px; border-radius: 4px; font-size: 16px; cursor: pointer; font-weight: 600; transition: background-color 0.3s; width: 100%; margin-top: 10px; }
+    .send-now-btn:hover { background: #2980b9; }
+    .info-note { font-size: 14px; color: #7f8c8d; margin-top: 8px; text-align: center; }
+    .kakao-status { margin-top: 10px; }
+    .connected { color: green; font-weight: 500; }
+    .not-connected { color: #e74c3c; margin-right: 10px; }
+    .connect-btn { background: #FFCD00; color: #3C1E1E; padding: 6px 12px; border-radius: 4px; text-decoration: none; font-weight: 500; display: inline-block; }
+    .connect-btn:hover { background: #E6B800; }
+    .setting-note { font-size: 12px; color: #7f8c8d; margin-bottom: 10px; }
+    .kakao-note { font-size: 12px; color: #7f8c8d; margin-top: 5px; }
 </style>
 {% endblock %}

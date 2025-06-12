@@ -1,4 +1,3 @@
-# services/ai_summary.py
 import psycopg2
 from openai import OpenAI
 import json
@@ -6,46 +5,18 @@ from datetime import datetime
 import os
 from dotenv import load_dotenv
 from .database import get_db_connection
-from flask import current_app
 import logging
 import re
 
 logger = logging.getLogger('INSTWAVE')
 
-# Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-
-def ask_openai(summary, lang="en"):
-    """Generate summary in specified language"""
-    if lang == "ko":
-        prompt = f"""
-다음 논문 원문을 분석해줘:
-
-{summary}
-
-- 논문 요약 (한 줄):
-- 핵심 주제:
-- 중요 키워드 3~5개:
-- 분류 카테고리 (ex: Computer Vision, NLP 등):
-- AI 평가 (주관적인 해석 포함 가능):
-- 중요도 점수 (0~1 부동소수점 수치):
-
-결과를 다음 JSON 포맷으로 정리해줘:
-
-{{
-  "summary": "...",
-  "evaluation": "...",
-  "importance": 0.xx,
-  "keywords": ["...", "...", "..."],
-  "category": "..."
-}}
-"""
-    else:  # Default to English
-        prompt = f"""
+def ask_openai(summary):
+    """Generate summary in English only"""
+    prompt = f"""
 Please analyze the following research paper:
 
 {summary}
@@ -85,7 +56,6 @@ Organize the results in the following JSON format:
         logger.error(f"[OpenAI API error] {e}")
         return None
 
-
 def generate_ai_summaries():
     conn = get_db_connection()
     cur = conn.cursor()
@@ -108,8 +78,8 @@ def generate_ai_summaries():
 
         logger.info(f"[Summarizing] ID: {thesis_id}, arXiv: {arxiv_id} ({idx + 1}/{total})")
 
-        # Try to generate summary in English (more reliable)
-        llm_json_text = ask_openai(summary, "en")
+        # Generate summary in English only
+        llm_json_text = ask_openai(summary)
         if not llm_json_text:
             error_count += 1
             continue

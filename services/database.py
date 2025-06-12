@@ -1,4 +1,3 @@
-# services/database.py
 import psycopg2
 import json
 import logging
@@ -8,9 +7,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 
 logger = logging.getLogger('INSTWAVE')
 
-
 def get_db_connection():
-    """Create and return a new database connection"""
     try:
         conn = psycopg2.connect(
             host=current_app.config['DB_HOST'],
@@ -24,21 +21,17 @@ def get_db_connection():
         logger.error(f"Database connection failed: {str(e)}")
         raise
 
-
 def get_user_by_email(email):
-    """Get user by email address"""
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
         cur.execute("""
             SELECT id, name, email, password_hash, language, notification_method
             FROM users
             WHERE email = %s
         """, (email,))
-
         user = cur.fetchone()
         if user:
             return {
@@ -59,52 +52,38 @@ def get_user_by_email(email):
         if conn:
             conn.close()
 
-
 def upsert_subscription(name, email, password_hash, topics, language='en', notification_method='email', active=True):
-    """Insert or update user subscription with password"""
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
-        # Convert topics to integers
         topic_ids = [int(t) for t in topics]
-
-        # Verify topics exist
         cur.execute("SELECT id FROM topics WHERE id = ANY(%s)", (topic_ids,))
         valid_topics = [row[0] for row in cur.fetchall()]
-
         if len(valid_topics) != len(topic_ids):
             invalid_ids = set(topic_ids) - set(valid_topics)
             raise ValueError(f"Invalid topic IDs: {', '.join(map(str, invalid_ids))}")
-
-        # Check if user exists
         cur.execute("SELECT id FROM users WHERE email = %s", (email,))
         existing_user = cur.fetchone()
-
         if existing_user:
             user_id = existing_user[0]
-            # update user
             cur.execute(
                 "UPDATE users SET name = %s, password_hash = %s, language = %s, notification_method = %s, active = %s WHERE id = %s",
                 (name, password_hash, language, notification_method, active, user_id)
             )
         else:
-            # create user
             cur.execute(
                 "INSERT INTO users (name, email, password_hash, language, notification_method, active) VALUES (%s, %s, %s, %s, %s, %s) RETURNING id",
                 (name, email, password_hash, language, notification_method, active)
             )
             user_id = cur.fetchone()[0]
-
         cur.execute("DELETE FROM user_topics WHERE user_id = %s", (user_id,))
         for topic_id in topic_ids:
             cur.execute(
                 "INSERT INTO user_topics (user_id, topic_id) VALUES (%s, %s)",
                 (user_id, topic_id)
             )
-
         conn.commit()
         return user_id
     except ValueError as ve:
@@ -123,15 +102,12 @@ def upsert_subscription(name, email, password_hash, topics, language='en', notif
         if conn:
             conn.close()
 
-
 def get_subscribed_users():
-    """Get all users with email subscriptions"""
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
-
         cur.execute("""
             SELECT u.id, u.email, u.name, u.language, u.notification_method,
                    array_agg(ut.topic_id) AS topics
@@ -139,7 +115,6 @@ def get_subscribed_users():
             JOIN user_topics ut ON u.id = ut.user_id
             GROUP BY u.id
         """)
-
         users = []
         for row in cur.fetchall():
             users.append({
@@ -150,7 +125,6 @@ def get_subscribed_users():
                 'notification_method': row[4],
                 'topics': row[5]
             })
-
         return users
     except Exception as e:
         logger.error(f"Database error in get_subscribed_users: {str(e)}")
@@ -161,20 +135,16 @@ def get_subscribed_users():
         if conn:
             conn.close()
 
-
 def get_recent_papers():
-    """Get papers with topics from last week with proper mapping"""
     conn = None
     cur = None
     try:
         conn = get_db_connection()
         cur = conn.cursor()
         today = datetime.now()
-
         days_since_tuesday = (today.weekday() - 1) % 7
         last_tuesday = today - timedelta(days=days_since_tuesday + 7)
         this_monday = today - timedelta(days=today.weekday())
-
         cur.execute("""
             SELECT id, title, author, ai_summary, created_at,
                    arxiv_id, categories
@@ -194,7 +164,6 @@ def get_recent_papers():
                         categories = row[6]
                     else:
                         logger.warning(f"Unexpected categories type for paper {row[0]}: {type(row[6])}")
-
                 top_level_categories = set()
                 for category in categories:
                     if isinstance(category, str) and '.' in category:
@@ -202,7 +171,6 @@ def get_recent_papers():
                         top_level_categories.add(top_level)
                     elif isinstance(category, str):
                         top_level_categories.add(category)
-
                 if top_level_categories:
                     cur.execute("""
                         SELECT DISTINCT topic_id 
@@ -212,7 +180,6 @@ def get_recent_papers():
                     topic_ids = [r[0] for r in cur.fetchall()]
                 else:
                     topic_ids = []
-
                 ai_summary = json.loads(row[3]) if row[3] else {}
                 papers.append({
                     'id': row[0],
