@@ -1,8 +1,9 @@
-APScheduler==3.11.0
 Flask==3.1.1
 Flask-APScheduler==1.13.1
-Jinja2==3.1.6
-psycopg2-binary==2.9.10
+Flask-Session==0.8.0
 python-dotenv==1.1.0
+psycopg2-binary==2.9.10
 requests==2.32.3
 resend==2.10.0
+openai==1.85.0
+Werkzeug==3.1.3
