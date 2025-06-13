@@ -84,7 +84,7 @@ def fetch_arxiv_daily(request):
             }
 
             try:
-                response = requests.get(url, headers=headers, timeout=2300)
+                response = session.get(url, headers=headers, timeout=30)
                 response.raise_for_status()
             except requests.exceptions.RequestException as e:
                 print(f'❌ Error fetching {url}: {e}')
@@ -133,7 +133,7 @@ def fetch_arxiv_daily(request):
                     if should_stop:
                         break
                     start += max_results_per_call
-                    time.sleep(2)
+                    time.sleep(3)
 
         for paper in papers_by_id.values():
             paper['keywords'] = list(paper['keywords'])
