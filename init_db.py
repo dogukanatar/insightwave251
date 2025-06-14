@@ -15,21 +15,68 @@ conn = psycopg2.connect(
 )
 cur = conn.cursor()
 
-# Example tables based on a sample ERD
+# Create tables based on your ERD
+
+# users table
 cur.execute("""
 CREATE TABLE IF NOT EXISTS users (
     id SERIAL PRIMARY KEY,
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL
+    email VARCHAR(255) UNIQUE NOT NULL,
+    name VARCHAR(255),
+    language VARCHAR(50),
+    notification_method VARCHAR(50),
+    password_hash VARCHAR(255),
+    active BOOLEAN DEFAULT TRUE
 );
 """)
 
+# topics table
 cur.execute("""
-CREATE TABLE IF NOT EXISTS posts (
+CREATE TABLE IF NOT EXISTS topics (
     id SERIAL PRIMARY KEY,
-    user_id INTEGER REFERENCES users(id),
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    label VARCHAR(255) NOT NULL
+);
+""")
+
+# thesis table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS thesis (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(500),
+    author VARCHAR(500),
+    ai_summary TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    arxiv_id VARCHAR(255),
+    publish_date DATE,
+    categories VARCHAR(500),
+    summary TEXT
+);
+""")
+
+# paper_topics table (join table between thesis and topics)
+cur.execute("""
+CREATE TABLE IF NOT EXISTS paper_topics (
+    id SERIAL PRIMARY KEY,
+    paper_id INTEGER REFERENCES thesis(id) ON DELETE CASCADE,
+    topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE
+);
+""")
+
+# arxiv_category_mapping table
+cur.execute("""
+CREATE TABLE IF NOT EXISTS arxiv_category_mapping (
+    arxiv_category VARCHAR(50) PRIMARY KEY,
+    topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE
+);
+""")
+
+# user_topics table (join table between users and topics)
+cur.execute("""
+CREATE TABLE IF NOT EXISTS user_topics (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    topic_id INTEGER REFERENCES topics(id) ON DELETE CASCADE
 );
 """)
 
