@@ -84,6 +84,7 @@ The application will be available at `http://localhost:8000`.
 ```
 ├── app.py                     # Main Flask application
 ├── config.py                  # Configuration settings
+├── init_db.py                 # Set up the database tables for local
 ├── scheduler.py               # Background task scheduler
 ├── requirements.txt           # Python dependencies
 ├── .env                       # Environment variables (example)
