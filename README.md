@@ -62,7 +62,19 @@ python init_db.py
 
 ```
 
-This script will create all necessary tables in your PostgreSQL database based on your ERD. Make sure your environment variables (DB_NAME, DB_USER, etc.) are set correctly.
+This script will create the following tables in your PostgreSQL database:
+
+users:
+
+id (SERIAL PRIMARY KEY)
+username (VARCHAR(50), UNIQUE, NOT NULL)
+email (VARCHAR(100), UNIQUE, NOT NULL)
+posts:
+
+id (SERIAL PRIMARY KEY)
+user_id (INTEGER, REFERENCES users(id))
+content (TEXT, NOT NULL)
+created_at (TIMESTAMP, defaults to CURRENT_TIMESTAMP)
 
 ### 5. Run the application
 
