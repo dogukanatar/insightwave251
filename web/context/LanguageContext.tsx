@@ -74,6 +74,8 @@ const translations: Translations = {
     login_here: "Login here",
     topics_selected: "topics selected",
     select_more: "Select",
+    reconnect_kakao: "Reconnect Kakao Account",
+    kakao_reconnected: "Kakao account reconnected successfully!",
   },
   ko: {
     login_title: "INSTWAVE 연구 논문 요약",
@@ -135,6 +137,8 @@ const translations: Translations = {
     login_here: "로그인하기",
     topics_selected: "개 주제 선택됨",
     select_more: "선택",
+    reconnect_kakao: "카카오 계정 재연결",
+    kakao_reconnected: "카카오 계정이 성공적으로 재연결되었습니다!",
   }
 };
 

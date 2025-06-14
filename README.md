@@ -133,6 +133,7 @@ INSTWAVE/
 │   ├── config.py             # Configuration settings
 │   ├── scheduler.py          # Task scheduling manager
 │   ├── requirements.txt      # Python dependencies
+│   ├── init_db.py            # Database initialization script
 │   ├── services/             # Core application services
 │   │   ├── core_services.py  # Authentication, content generation, notifications
 │   │   └── database.py       # Database operations
@@ -221,19 +222,72 @@ SECRET_KEY=your_secret_key
 
 ```
 
-**Web / (.env.local)**
+**Web / .env.local**
 
 ```
 NEXT_PUBLIC_BACKEND_URL=your_be_url
 
 ```
 
-### Running the Application
+## Initialize the Database
+
+Run the following command to create the required database tables:
+
+```bash
+cd server
+python init_db.py
+
+```
+
+This script will create the following tables in your PostgreSQL database:
+
+1. **users**:
+    - `id` (SERIAL PRIMARY KEY)
+    - `email` (VARCHAR(255), UNIQUE, NOT NULL)
+    - `name` (VARCHAR(255), NOT NULL)
+    - `language` (VARCHAR(2))
+    - `notification_method` (VARCHAR(10))
+    - `password_hash` (VARCHAR(255), NOT NULL)
+    - `active` (BOOLEAN)
+    - `created_at` (TIMESTAMPTZ)
+2. **topics**:
+    - `id` (SERIAL PRIMARY KEY)
+    - `label` (VARCHAR(255), UNIQUE, NOT NULL)
+3. **thesis** (research papers):
+    - `id` (SERIAL PRIMARY KEY)
+    - `arxiv_id` (VARCHAR(255), UNIQUE)
+    - `title` (VARCHAR(500), NOT NULL)
+    - `author` (VARCHAR(500), NOT NULL)
+    - `summary` (TEXT)
+    - `ai_summary` (TEXT)
+    - `publish_date` (DATE)
+    - `categories` (TEXT[])
+4. **arxiv_category_mapping**:
+    - `arxiv_category` (VARCHAR(50), PRIMARY KEY)
+    - `topic_id` (INTEGER, REFERENCES topics(id))
+5. **user_topics**:
+    - `id` (SERIAL PRIMARY KEY)
+    - `user_id` (INTEGER, REFERENCES users(id))
+    - `topic_id` (INTEGER, REFERENCES topics(id))
+6. **kakao_tokens**:
+    - `user_id` (INTEGER, PRIMARY KEY REFERENCES users(id))
+    - `access_token` (TEXT, NOT NULL)
+    - `refresh_token` (TEXT)
+    - `expires_at` (DOUBLE PRECISION, NOT NULL)
+
+## Running the Application
+
+1. **Initialize the database** (first time setup only):
+
+```bash
+cd server
+python init_db.py
+
+```
 
 1. **Start backend**
 
 ```bash
-cd server
 source venv/bin/activate
 python app.py
 
@@ -250,7 +304,121 @@ npm run dev
 1. **Access application**
 Open `http://localhost:3000` in your browser
 
-### Scheduled Tasks
+## Usage Guide
 
-1. Weekly AI summary generation (Tuesday 7:00 AM KST)
-2. Weekly notification dispatch (Tuesday 8:00 AM KST)
+### 1. Accessing the Application
+
+1. Open your web browser and navigate to the application URL
+2. You'll be automatically redirected to the login page
+    
+    ![Screenshot1.png](images/Screenshot1.png)
+
+### 2. Switching Language
+
+1. In the top-right corner of any page, locate the language dropdown
+2. Select your preferred language:
+    - English
+    - 한국어 (Korean)
+3. The entire interface will instantly update to your selected language
+    ![Screenshot2.png](images/Screenshot2.png)
+    
+
+### 3. Creating an Account
+
+1. From the login page, click "New user? Create account"
+2. Fill in the registration form:
+    - Full name
+    - Valid email address
+    - Password (8-20 characters with letters and numbers)
+3. Select at least 1 research topic that interests you
+4. Click "Register" to create your account
+5. You'll be automatically logged in and redirected to your dashboard
+    
+    ![Screenshot3.png](images/Screenshot3.png)
+
+### 4. Logging In
+
+1. Enter your registered email address
+2. Type your password
+3. Click "Login"
+4. You'll be redirected to your personalized dashboard
+    
+    ![Screenshot4.png](images/Screenshot4.png)
+
+### 5. Managing Preferences
+
+1. On your dashboard, configure your settings:
+    - **Preferred Language**: English or Korean
+    - **Notification Method**: Email, Kakao, or both
+    - **Research Topics**: Select topics you want to follow
+    - **Notification Status**: Activate/deactivate weekly digests
+2. Click "Save Preferences" to apply changes
+    
+    ![Screenshot5.png](images/Screenshot5.png)
+
+### 6. Connecting Kakao
+
+1. In Notification Settings, click "Connect Kakao Account"
+    ![Screenshot6.png](images/Screenshot6.png)
+    
+2. Authorize INSTWAVE to send you notifications
+    ![Screenshot7.png](images/Screenshot7.png)
+    
+3. You'll be redirected back to your dashboard
+4. Kakao status will show "Connected"
+
+### 7. Receiving Research Digests
+
+- **Automatic Delivery**: Every Tuesday at 8:00 AM KST
+- **Manual Delivery**: Click "Send Weekly Digest Now" to receive current papers immediately
+- **Delivery Methods**: Receive via email, Kakao, or both based on your preferences
+    
+    ![Screenshot8.png](images/Screenshot8.png)
+
+### 8. Testing Notifications
+
+1. In Subscription Details, click "Send Weekly Digest Now"
+2. Check your selected notification methods:
+    - Email inbox
+    - KakaoTalk messages
+3. You'll receive the latest papers in your selected topics
+    
+    ![Screenshot9.png](images/Screenshot9.png)
+
+### 9. Logging Out
+
+1. Click "Logout" in the top-right corner
+2. You'll be securely logged out and redirected to the login page
+    
+    ![Screenshot10.png](images/Screenshot10.png)
+
+### 10. Troubleshooting
+
+- If notifications don't arrive:
+    1. Check your spam folder
+    2. Verify notification status is "Active"
+    3. Ensure you've selected at least 1 research topic
+- If Kakao connection fails:
+    1. Ensure you authorized all permissions
+    2. Try reconnecting from the dashboard
+    3. Verify your Kakao app notification settings
+
+## Scheduled Tasks
+
+The system runs the following automated tasks:
+
+
+1. **Daily Crawling** (12:00 PM KST): 
+    - Crawls papers published the previous day
+    - On Tuesdays, additionally crawls weekend papers between 12:00-2:00 PM
+
+1. **Weekly AI summary generation** (Tuesday 7:00 AM KST):
+    - Fetches new papers from arXiv
+    - Generates AI summaries for each paper
+    - Stores summaries in the database
+
+2. **Weekly notification dispatch** (Tuesday 8:00 AM KST):
+    - Prepares personalized digests for all active users
+    - Sends emails and/or Kakao messages based on preferences
+    - Logs all delivery attempts and results
+

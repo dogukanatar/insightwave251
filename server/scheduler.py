@@ -30,20 +30,32 @@ class SchedulerManager:
     def _send_weekly_notifications(self):
         with self.app.app_context():
             try:
-                logger.info("Starting weekly notification dispatch...")
+                logger.info("开始发送每周通知...")
                 users = get_subscribed_users()
                 papers = get_recent_papers()
-                for user in users:
-                    if not user.get('active', True):
+
+                for target_user in users:
+                    if not target_user.get('active', True):
+                        logger.info(f"用户 {target_user['id']} 未激活，跳过")
                         continue
-                    email_content = ContentService.generate_email_content(papers, user)
-                    if user['notification_method'] in ['email', 'both']:
-                        EmailService.send_research_digest(user, email_content)
-                    if user['notification_method'] in ['kakao', 'both']:
-                        KakaoService.send_research_digest(user, email_content)
-                logger.info(f"Successfully processed {len(users)} users")
+
+                    logger.info(f"处理用户 {target_user['id']} ({target_user['email']})")
+
+                    email_content = ContentService.generate_email_content(papers, target_user)
+
+                    if target_user['notification_method'] in ['email', 'both']:
+                        logger.info(f"为用户 {target_user['id']} 发送邮件")
+                        success = EmailService.send_research_digest(target_user, email_content)
+                        logger.info(f"邮件发送结果: {'成功' if success else '失败'}")
+
+                    if target_user['notification_method'] in ['kakao', 'both']:
+                        logger.info(f"为用户 {target_user['id']} 发送Kakao消息")
+                        success = KakaoService.send_research_digest(target_user, email_content)
+                        logger.info(f"Kakao发送结果: {'成功' if success else '失败'}")
+
+                logger.info(f"成功处理 {len(users)} 个用户")
             except Exception as e:
-                logger.error(f"Weekly notification failed: {str(e)}")
+                logger.error(f"每周通知失败: {str(e)}")
 
     def _generate_ai_summaries_job(self):
         with self.app.app_context():

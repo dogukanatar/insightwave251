@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify, session
+from flask import Flask, request, jsonify, session, redirect
 from config import Config
 from scheduler import SchedulerManager
 from services.database import get_db_connection, get_recent_papers
@@ -117,7 +117,6 @@ FRONTEND_URL = "http://localhost:3000"
 def api_kakao_auth():
     if 'user_id' not in session:
         return jsonify(success=False, message="Unauthorized"), 401
-
     try:
         auth_url = KakaoService.generate_auth_url(str(session['user_id']))
         return jsonify(success=True, auth_url=auth_url)
@@ -125,20 +124,18 @@ def api_kakao_auth():
         logger.error(f"Kakao auth failed: {str(e)}")
         return jsonify(success=False, message="Failed to start Kakao authorization"), 500
 
+
 @app.route('/api/auth/kakao/callback')
 def api_kakao_callback():
     code = request.args.get('code')
     state = request.args.get('state')
     error = request.args.get('error')
-
     if error:
         logger.error(f"Kakao authorization denied: {error}")
         return redirect(f"{FRONTEND_URL}/dashboard?kakao_error={error}")
-
     if not code or not state:
         logger.error("Invalid Kakao callback request")
         return redirect(f"{FRONTEND_URL}/dashboard?kakao_error=invalid_request")
-
     try:
         if KakaoService.handle_authorization(code, state):
             return redirect(f"{FRONTEND_URL}/dashboard?kakao_success=1")

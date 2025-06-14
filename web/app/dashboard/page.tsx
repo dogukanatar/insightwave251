@@ -39,6 +39,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [sending, setSending] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
   const [formData, setFormData] = useState({
     language: "en",
     notification_method: "email",
@@ -81,15 +82,18 @@ export default function DashboardPage() {
     const kakaoSuccess = params.get("kakao_success");
 
     if (kakaoSuccess) {
-      setKakaoMessage("Kakao account connected successfully!");
+      if (dashboardData?.kakao_connected) {
+        setKakaoMessage(t("kakao_reconnected"));
+      } else {
+        setKakaoMessage(t("kakao_connected_success"));
+      }
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-
     if (kakaoError) {
       setKakaoMessage("Failed to connect Kakao account");
       window.history.replaceState({}, document.title, window.location.pathname);
     }
-  }, []);
+  }, [dashboardData]);
 
   const handleChange = (field: string, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -120,6 +124,7 @@ export default function DashboardPage() {
 
   const handleConnectKakao = async () => {
     setMessage("");
+    setKakaoLoading(true);
     try {
       const response = await getKakaoAuthUrl();
       if (response.success && response.auth_url) {
@@ -129,6 +134,8 @@ export default function DashboardPage() {
       }
     } catch (error) {
       setMessage("Network error");
+    } finally {
+      setKakaoLoading(false);
     }
   };
 
@@ -259,42 +266,6 @@ export default function DashboardPage() {
                       </RadioGroup>
                     </div>
 
-                    <div>
-                      <Label className="block mb-2 text-gray-700">{t("kakao_account")}</Label>
-                      <div className="mt-1">
-                        {dashboardData.kakao_connected ? (
-                          <div className="flex items-center">
-                            <Badge className="bg-green-100 text-green-800">Connected</Badge>
-                          </div>
-                        ) : (
-                          <div className="flex items-center space-x-2">
-                            <Badge className="bg-yellow-100 text-yellow-800">Not Connected</Badge>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleConnectKakao}
-                              disabled={saving || dashboardData.kakao_connected}
-                            >
-                              {t("connect_kakao")}
-                            </Button>
-                          </div>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">{t("kakao_note")}</p>
-                    </div>
-
-                    <div className="flex items-center space-x-2 pt-2">
-                      <Checkbox
-                        id="active"
-                        checked={formData.active}
-                        onCheckedChange={checked => handleChange("active", checked)}
-                        disabled={saving}
-                      />
-                      <Label htmlFor="active" className="cursor-pointer text-gray-700">
-                        {t("receive_notifications")}
-                      </Label>
-                    </div>
-
                     <div className="pt-4">
                       <Button
                         type="submit"
@@ -306,6 +277,43 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </form>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="text-lg">{t("kakao_account")}</CardTitle>
+                <CardDescription className="text-gray-600">
+                  {t("kakao_description")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center">
+                    {dashboardData.kakao_connected ? (
+                      <div className="flex items-center gap-2">
+                        <Badge className="bg-green-100 text-green-800">{t("connected")}</Badge>
+                        <span className="text-sm text-gray-600">{t("last_connected")}: {new Date().toLocaleDateString()}</span>
+                      </div>
+                    ) : (
+                      <Badge className="bg-yellow-100 text-yellow-800">{t("not_connected")}</Badge>
+                    )}
+                  </div>
+
+                  <Button
+                  onClick={handleConnectKakao}
+                  variant={dashboardData.kakao_connected ? "outline" : "default"}
+                  disabled={kakaoLoading}
+                  className="w-fit"
+                >
+                  {kakaoLoading ? t("connecting") :
+                    dashboardData.kakao_connected ? t("reconnect_kakao") : t("connect_kakao")}
+                  </Button>
+
+                  <p className="text-xs text-gray-500 mt-1">
+                    {t("kakao_reconnect_note")}
+                  </p>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -373,6 +381,20 @@ export default function DashboardPage() {
                         <Badge className="bg-gray-100 text-gray-800">{t("inactive")}</Badge>
                       )}
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  <div className="flex items-center space-x-2 pt-2">
+                    <Checkbox
+                      id="active"
+                      checked={formData.active}
+                      onCheckedChange={checked => handleChange("active", checked)}
+                      disabled={saving}
+                    />
+                    <Label htmlFor="active" className="cursor-pointer text-gray-700">
+                      {t("receive_notifications")}
+                    </Label>
                   </div>
 
                   <Separator />

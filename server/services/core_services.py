@@ -171,7 +171,7 @@ class KakaoService:
     @classmethod
     def generate_auth_url(cls, user_id):
         base_url = "https://kauth.kakao.com/oauth/authorize"
-        redirect_uri = url_for('kakao_callback', _external=True).replace("127.0.0.1", "localhost")
+        redirect_uri = url_for('api_kakao_callback', _external=True).replace("127.0.0.1", "localhost")
         if "localhost" in redirect_uri:
             redirect_uri = redirect_uri.replace("https://", "http://")
         params = {
@@ -186,113 +186,127 @@ class KakaoService:
     @classmethod
     def handle_authorization(cls, code, state):
         try:
-            user_id, _ = state.split("|", 1)
-            redirect_uri = url_for('kakao_callback', _external=True).replace("127.0.0.1", "localhost")
+            user_id, timestamp = state.split("|", 1)
+            user_id = int(user_id)
+
+            if time.time() - float(timestamp) > 300:
+                logger.error("Authorization state expired")
+                return False
+
+            redirect_uri = url_for('api_kakao_callback', _external=True).replace("127.0.0.1", "localhost")
             if "localhost" in redirect_uri:
                 redirect_uri = redirect_uri.replace("https://", "http://")
-
             token_data = {
                 "grant_type": "authorization_code",
                 "client_id": cls.CLIENT_ID,
                 "redirect_uri": redirect_uri,
                 "code": code
             }
-
             response = requests.post("https://kauth.kakao.com/oauth/token", data=token_data, timeout=10)
             response.raise_for_status()
             token_info = response.json()
-
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT user_id FROM kakao_tokens WHERE user_id = %s", (user_id,))
 
-            if cur.fetchone():
+            cur.execute("SELECT user_id FROM kakao_tokens WHERE user_id = %s", (user_id,))
+            exists = cur.fetchone() is not None
+
+            if exists:
                 cur.execute("""
-                    UPDATE kakao_tokens 
-                    SET access_token = %s, refresh_token = %s, expires_at = %s
-                    WHERE user_id = %s
-                """, (
+                        UPDATE kakao_tokens 
+                        SET access_token = %s, refresh_token = %s, expires_at = %s, updated_at = NOW()
+                        WHERE user_id = %s
+                    """, (
                     token_info["access_token"],
                     token_info.get("refresh_token", ""),
                     time.time() + token_info["expires_in"],
                     user_id
                 ))
+                logger.info(f"Updated Kakao token for user {user_id}")
             else:
                 cur.execute("""
-                    INSERT INTO kakao_tokens (user_id, access_token, refresh_token, expires_at)
-                    VALUES (%s, %s, %s, %s)
-                """, (
+                        INSERT INTO kakao_tokens (user_id, access_token, refresh_token, expires_at)
+                        VALUES (%s, %s, %s, %s)
+                    """, (
                     user_id,
                     token_info["access_token"],
                     token_info.get("refresh_token", ""),
                     time.time() + token_info["expires_in"]
                 ))
-
+                logger.info(f"Created new Kakao token for user {user_id}")
             conn.commit()
             return True
         except Exception as e:
             logger.error(f"Authorization failed: {str(e)}")
             return False
+        finally:
+            if 'cur' in locals(): cur.close()
+            if 'conn' in locals(): conn.close()
 
     @classmethod
-    def send_research_digest(cls, user, content):
-        from .core_services import TranslationService
+    def send_research_digest(cls, target_user, content):
         try:
+            logger.info(f"准备为用户 {target_user['id']} 发送Kakao消息")
+
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT access_token, refresh_token, expires_at FROM kakao_tokens WHERE user_id = %s",
-                        (user['id'],))
+
+            cur.execute(
+                "SELECT access_token, refresh_token, expires_at "
+                "FROM kakao_tokens WHERE user_id = %s",
+                (target_user['id'],)
+            )
             token_data = cur.fetchone()
-
             if not token_data:
+                logger.warning(f"用户 {target_user['id']} 未找到Kakao令牌")
                 return False
-
             access_token, refresh_token, expires_at = token_data
+            logger.info(f"用户 {target_user['id']} 的令牌: {access_token[:6]}...{access_token[-6:]}")
+
             if time.time() > expires_at - 300:
-                if not cls._refresh_token(user['id'], refresh_token):
+                logger.info(f"用户 {target_user['id']} 的令牌即将过期，尝试刷新")
+                if not cls._refresh_token(target_user['id'], refresh_token):
+                    logger.error(f"用户 {target_user['id']} 的令牌刷新失败")
                     return False
-                cur.execute("SELECT access_token FROM kakao_tokens WHERE user_id = %s", (user['id'],))
+                cur.execute(
+                    "SELECT access_token FROM kakao_tokens WHERE user_id = %s",
+                    (target_user['id'],)
+                )
                 access_token = cur.fetchone()[0]
-
+                logger.info(f"用户 {target_user['id']} 使用新令牌: {access_token[:6]}...{access_token[-6:]}")
             papers = get_recent_papers()
-            user_topic_ids = set(user['topics'])
+            user_topic_ids = set(target_user['topics'])
             user_papers = [p for p in papers if set(p['topics']) & user_topic_ids]
-
             if not user_papers:
                 message = "📚 There are no new research papers this week."
-                if user['language'] == 'ko':
+                if target_user['language'] == 'ko':
                     message = "📚 이번 주에는 새로운 연구 논문이 없습니다."
             else:
                 sorted_papers = sorted(user_papers, key=lambda x: x['ai_summary'].get('importance', 0), reverse=True)[
                                 :2]
-
                 message = "📚 This week's top research updates:\n\n"
-                if user['language'] == 'ko':
+                if target_user['language'] == 'ko':
                     message = "📚 이번 주 주요 연구 업데이트:\n\n"
-
                 for i, paper in enumerate(sorted_papers, 1):
                     title = paper['title']
                     summary = paper['ai_summary'].get('summary', '')
-
-                    if user['language'] == 'ko':
+                    if target_user['language'] == 'ko':
                         title = TranslationService.translate_text(title, 'English', 'Korean')
                         if summary:
                             summary = TranslationService.translate_text(summary, 'English', 'Korean')
-
                     if summary:
                         summary = summary[:100] + '...' if len(summary) > 100 else summary
-
-                    if user['language'] == 'ko':
+                    if target_user['language'] == 'ko':
                         message += f"{i}. {title}\n- 요약: {summary}\n\n"
                     else:
                         message += f"{i}. {title}\n- Summary: {summary}\n\n"
-
             dashboard_link = url_for('api_dashboard', _external=True)
-            if user['language'] == 'ko':
+            if target_user['language'] == 'ko':
                 message += f"\n더 많은 연구 보기: {dashboard_link}"
             else:
                 message += f"\nView more research: {dashboard_link}"
 
+            logger.info(f"为用户 {target_user['id']} 准备的消息内容: {message[:50]}...")
             response = requests.post(
                 "https://kapi.kakao.com/v2/api/talk/memo/default/send",
                 headers={"Authorization": f"Bearer {access_token}"},
@@ -300,13 +314,25 @@ class KakaoService:
                     "object_type": "text",
                     "text": message,
                     "link": {"web_url": dashboard_link}
-                }, ensure_ascii=False)}
+                }, ensure_ascii=False)},
+                timeout=10
             )
+            logger.info(f"用户 {target_user['id']} 的Kakao API响应: {response.status_code}, {response.text}")
 
-            return response.status_code == 200 and response.json().get("result_code") == 0
-        except Exception as e:
-            logger.error(f"Failed to send Kakao message: {str(e)}")
+            if response.status_code == 200:
+                result = response.json()
+                if result.get("result_code") == 0:
+                    logger.info(f"成功为用户 {target_user['id']} 发送Kakao消息")
+                    return True
+                else:
+                    logger.error(f"Kakao API错误: {result.get('msg')}, code: {result.get('code')}")
             return False
+        except Exception as e:
+            logger.error(f"为用户 {target_user['id']} 发送Kakao消息失败: {str(e)}")
+            return False
+        finally:
+            if 'cur' in locals(): cur.close()
+            if 'conn' in locals(): conn.close()
 
     @classmethod
     def _refresh_token(cls, user_id, refresh_token):
