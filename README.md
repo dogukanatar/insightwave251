@@ -47,13 +47,24 @@ SECRET_KEY=your_secret_key
 RESEND_API_KEY=your_resend_api_key
 OPENAI_API_KEY=your_openai_api_key
 DB_HOST=your_db_host
-DB_NAME=postgres
-DB_USER=postgres
+DB_NAME=your_db_name
+DB_USER=your_db_user
 DB_PASSWORD=your_db_password
 KAKAO_CLIENT_ID=your_kakao_client_id
 ```
 
-### 4. Run the application
+### 4. Initialize the Database
+
+Run the following command to create the required database tables:
+
+```bash
+python init_db.py
+
+```
+
+This script will create all necessary tables in your PostgreSQL database based on your ERD. Make sure your environment variables (DB_NAME, DB_USER, etc.) are set correctly.
+
+### 5. Run the application
 
 ```bash
 python app.py
