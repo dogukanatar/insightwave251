@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ _('email_subject') }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f5f8fa; padding: 20px; }
+        .email-container { max-width: 650px; margin: 0 auto; background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); }
+        .header { background: linear-gradient(135deg, #2c3e50, #3498db); color: white; padding: 30px 40px; text-align: center; }
+        .header h1 { font-size: 28px; margin-bottom: 10px; }
+        .header p { opacity: 0.9; font-size: 16px; max-width: 500px; margin: 0 auto; }
+        .content { padding: 30px; line-height: 1.6; color: #333; }
+        .greeting { margin-bottom: 25px; padding-bottom: 15px; border-bottom: 1px solid #eee; }
+        .papers-container { display: grid; gap: 30px; margin-top: 20px; }
+        .paper { background: #f8f9fa; border-radius: 8px; padding: 20px; border-left: 4px solid #3498db; position: relative; }
+        .paper-number { position: absolute; top: -12px; left: -12px; background: #3498db; color: white; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; }
+        .paper-title { color: #2c3e50; font-size: 20px; margin-bottom: 12px; font-weight: 600; padding-right: 20px; }
+        .paper-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .paper-category { background: #e1f0fa; color: #2980b9; padding: 4px 10px; border-radius: 16px; font-weight: 500; font-size: 14px; }
+        .paper-importance { color: #7f8c8d; font-weight: 500; font-size: 14px; }
+        .paper-meta { display: flex; justify-content: space-between; margin-bottom: 10px; font-size: 14px; color: #555; }
+        .paper-authors { flex: 1; }
+        .paper-date { text-align: right; min-width: 100px; }
+        .paper-summary { margin: 15px 0; line-height: 1.7; color: #444; padding: 10px 0; border-top: 1px solid #eee; border-bottom: 1px solid #eee; }
+        .paper-keywords { margin: 10px 0; font-size: 14px; color: #555; }
+        .paper-link { display: inline-block; background: #3498db; color: white; padding: 8px 15px; border-radius: 4px; text-decoration: none; font-weight: 500; transition: background 0.3s; font-size: 14px; margin-top: 10px; }
+        .paper-link:hover { background: #2980b9; }
+        .footer { background: #f8f9fa; color: #7f8c8d; text-align: center; padding: 25px; font-size: 14px; border-top: 1px solid #eee; }
+        .footer-links { margin-top: 15px; }
+        .footer-links a { color: #3498db; text-decoration: none; margin: 0 10px; }
+        .footer-links a:hover { text-decoration: underline; }
+        @media (max-width: 600px) {
+            .header, .content { padding: 20px; }
+            .paper-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            .paper-meta { flex-direction: column; gap: 8px; }
+            .paper-date { text-align: left; }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <h1>{{ _('email_subject') }}</h1>
+            <p>{{ _('email_intro') }}</p>
+        </div>
+        <div class="content">
+            <div class="greeting">
+                <h2>{{ _('email_greeting') }} {{ user_name }},</h2>
+                <p>{{ _('email_intro') }}</p>
+            </div>
+            {{ content | safe }}
+        </div>
+        <div class="footer">
+            <p>{{ _('email_footer_auto') }}</p>
+            <div class="footer-links">
+                <a href="{{ unsubscribe_link }}">{{ _('email_footer_links') }}</a>
+            </div>
+            <p style="margin-top: 15px;">{{ _('email_copyright') }}</p>
+        </div>
+    </div>
+</body>
+</html>
