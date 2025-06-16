@@ -421,4 +421,4 @@ The system runs the following automated tasks:
     - Prepares personalized digests for all active users
     - Sends emails and/or Kakao messages based on preferences
     - Logs all delivery attempts and results
-
+![Screenshot_email.png](images/Screenshot_email.png)
